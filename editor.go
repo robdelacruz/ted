@@ -15,8 +15,7 @@ type EdCell struct {
 type EdLine []*EdCell
 
 type Editor struct {
-	CurX, CurY int
-	Lines      []EdLine
+	Lines []EdLine
 }
 
 func NewEditor() *Editor {
@@ -36,55 +35,26 @@ func (ed *Editor) Print() {
 	}
 }
 
-// Make sure cursor stays within text bounds
-func (ed *Editor) BoundsCursor() {
-	if ed.CurY < 0 {
-		ed.CurY = 0
+func (ed *Editor) line(y int) EdLine {
+	if y < len(ed.Lines) {
+		return ed.Lines[y]
 	}
-	if ed.CurY > len(ed.Lines)-1 {
-		ed.CurY = len(ed.Lines) - 1
-	}
-
-	if ed.CurX < 0 {
-		ed.CurX = 0
-	}
-	if ed.CurX > len(ed.Lines[ed.CurY]) {
-		ed.CurX = len(ed.Lines[ed.CurY])
+	return EdLine{}
+}
+func (ed *Editor) replaceLine(y int, el EdLine) {
+	if y < len(ed.Lines) {
+		ed.Lines[y] = el
 	}
 }
-func (ed *Editor) CurLeft() {
-	ed.CurX--
-	ed.BoundsCursor()
-}
-func (ed *Editor) CurRight() {
-	ed.CurX++
-	ed.BoundsCursor()
-}
-func (ed *Editor) CurUp() {
-	ed.CurY--
-	ed.BoundsCursor()
-}
-func (ed *Editor) CurDown() {
-	ed.CurY++
-	ed.BoundsCursor()
-}
-
-func (ed *Editor) curLine() EdLine {
-	return ed.Lines[ed.CurY]
-}
-func (ed *Editor) setCurLine(el EdLine) {
-	ed.Lines[ed.CurY] = el
-}
-func (ed *Editor) InsertCell(cell *EdCell) {
+func (ed *Editor) InsertCell(x, y int, cell *EdCell) {
 	// Carriage return, add new line below current line
 	if cell.Ch == '\n' {
-		ed.InsertNewLine()
+		ed.InsertNewLine(y)
 		return
 	}
 
 	// Add new char
-	ed.setCurLine(ed.curLine().InsertCell(ed.CurX, cell))
-	ed.CurRight()
+	ed.replaceLine(y, ed.line(y).InsertCell(x, cell))
 }
 
 func (ed *Editor) InsertLines(y int, els []EdLine) {
@@ -99,12 +69,12 @@ func (ed *Editor) InsertLine(y int, el EdLine) {
 	ed.Lines[y] = el
 }
 
-// Insert new line after cursor
-func (ed *Editor) InsertNewLine() {
-	ed.InsertLine(ed.CurY+1, EdLine{})
-	ed.CurDown()
+func (ed *Editor) InsertNewLine(y int) {
+	ed.InsertLine(y+1, EdLine{})
 }
 
+// EdLine methods
+//
 func (el EdLine) InsertCells(x int, rcs []*EdCell) EdLine {
 	el = append(el, rcs...)
 	copy(el[x+len(rcs):], el[x:])

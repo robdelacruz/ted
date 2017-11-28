@@ -24,9 +24,10 @@ func main() {
 	defer tb.Close()
 
 	scr := NewScreen()
-	ed := scr.Ed
+	view := scr.View
+	ed := scr.View.Ed
 
-	tb.SetCursor(ed.CurX, ed.CurY)
+	tb.SetCursor(view.CurX, view.CurY)
 	flush()
 
 	for {
@@ -43,32 +44,34 @@ func main() {
 			case tb.KeyBackspace:
 				fallthrough
 			case tb.KeyBackspace2:
-				ed.CurLeft()
+				view.CurLeft()
 			case tb.KeyArrowUp:
-				ed.CurUp()
+				view.CurUp()
 			case tb.KeyArrowDown:
-				ed.CurDown()
+				view.CurDown()
 			case tb.KeyArrowLeft:
-				ed.CurLeft()
+				view.CurLeft()
 			case tb.KeyArrowRight:
-				ed.CurRight()
+				view.CurRight()
 			case tb.KeyHome:
 			case tb.KeyEnd:
 			case tb.KeyDelete:
 			case tb.KeyEnter:
-				ed.InsertNewLine()
+				ed.InsertNewLine(view.CurY)
+				view.CurDown()
 			case 0:
 				c = e.Ch
 			}
 
 			if c != 0 {
 				cell := &EdCell{c, scr.Fg, scr.Bg}
-				ed.InsertCell(cell)
+				ed.InsertCell(view.CurX, view.CurY, cell)
+				view.CurRight()
 			}
 
 			scr.Draw()
 
-			tb.SetCursor(ed.CurX, ed.CurY)
+			tb.SetCursor(view.CurX, view.CurY)
 			flush()
 		}
 	}
@@ -79,12 +82,15 @@ type Screen struct {
 	Width, Height int
 	Fg, Bg        tb.Attribute
 	Ed            *Editor
+	View          *EdView
 }
 
 func NewScreen() *Screen {
+	ed := NewEditor()
 	w, h := tb.Size()
 	return &Screen{
-		Ed:     NewEditor(),
+		Ed:     ed,
+		View:   NewView(ed),
 		Width:  w,
 		Height: h,
 		Fg:     tb.ColorDefault,
