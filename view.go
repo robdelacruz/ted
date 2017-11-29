@@ -65,10 +65,16 @@ func (v *EdView) Draw() {
 
 	// Content
 	x, y := v.Left, v.Top
+draw1:
 	for _, line := range v.Ed.Lines {
 		for _, cell := range line {
 			if x > v.Left+v.Width-1 {
-				break
+				y++
+				x = v.Left
+
+				if y > v.Top+v.Height-1 {
+					break draw1
+				}
 			}
 
 			printCell(x, y, cell)
@@ -84,11 +90,10 @@ func (v *EdView) Draw() {
 	}
 
 	// Show cursor if within view bounds
-	if v.CurX < v.Width && v.CurY < v.Height {
-		curSetX := v.Left + v.CurX
-		curSetY := v.Top + v.CurY
-		tb.SetCursor(curSetX, curSetY)
-	}
+	curSetX := v.Left + (v.CurX % v.Width)
+	curSetY := v.Top + v.CurY + (v.CurX / v.Width)
+
+	tb.SetCursor(curSetX, curSetY)
 }
 
 // Make sure cursor stays within text bounds
@@ -110,21 +115,71 @@ func (v *EdView) BoundsCursor() {
 	}
 }
 
+func (v *EdView) currentLine() EdLine {
+	return v.Ed.Line(v.CurY)
+}
+
 func (v *EdView) CurLeft() {
 	v.CurX--
+	if v.CurX < 0 {
+		if v.CurY > 0 {
+			v.CurX = len(v.currentLine()) - 1
+			v.CurY--
+		} else {
+			v.CurX++
+		}
+	}
 	v.BoundsCursor()
 }
 func (v *EdView) CurRight() {
 	v.CurX++
+	if v.CurX > len(v.currentLine()) {
+		if v.CurY < len(v.Ed.Lines)-1 {
+			v.CurX = 0
+			v.CurY++
+		} else {
+			v.CurX--
+		}
+	}
 	v.BoundsCursor()
 }
 func (v *EdView) CurUp() {
-	v.CurY--
+	v.CurX -= v.Width
+	if v.CurX < 0 {
+		v.CurX += v.Width
+		v.CurY--
+	}
 	v.BoundsCursor()
 }
 func (v *EdView) CurDown() {
-	v.CurY++
+	v.CurX += v.Width
+	if v.CurX > len(v.currentLine()) {
+		v.CurX -= v.Width
+		v.CurY++
+	}
 	v.BoundsCursor()
+}
+
+// Return whether cursor is in a wrapped line.
+// wrapped line = line length longer than view width
+func (v *EdView) IsWrapLine() bool {
+	line := v.Ed.Line(v.CurY)
+	if len(line) > v.Width {
+		return true
+	}
+	return false
+}
+
+// Return whether cursor is in the trailing part of a wrapped line.
+// trailing part = text that is 'wrapped' to the next line.
+func (v *EdView) IsTrailLine() bool {
+	if !v.IsWrapLine() {
+		return false
+	}
+	if v.CurX > v.Width-1 {
+		return true
+	}
+	return false
 }
 
 func (v *EdView) NewCell(c rune) *EdCell {

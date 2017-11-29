@@ -35,13 +35,13 @@ func (ed *Editor) Print() {
 	}
 }
 
-func (ed *Editor) line(y int) EdLine {
+func (ed *Editor) Line(y int) EdLine {
 	if y < len(ed.Lines) {
 		return ed.Lines[y]
 	}
 	return EdLine{}
 }
-func (ed *Editor) replaceLine(y int, el EdLine) {
+func (ed *Editor) ReplaceLine(y int, el EdLine) {
 	if y < len(ed.Lines) {
 		ed.Lines[y] = el
 	}
@@ -54,7 +54,7 @@ func (ed *Editor) InsertCell(x, y int, cell *EdCell) {
 	}
 
 	// Add new char
-	ed.replaceLine(y, ed.line(y).InsertCell(x, cell))
+	ed.ReplaceLine(y, ed.Line(y).InsertCell(x, cell))
 }
 
 func (ed *Editor) InsertLines(y int, els []EdLine) {
