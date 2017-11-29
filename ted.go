@@ -23,11 +23,10 @@ func main() {
 	}
 	defer tb.Close()
 
-	scr := NewScreen()
-	view := scr.View
-	ed := scr.View.Ed
+	ed := NewEditor()
+	view := NewView(ed, tb.ColorDefault, tb.ColorDefault, 10, 10, 15, 15)
 
-	tb.SetCursor(view.CurX, view.CurY)
+	view.Draw()
 	flush()
 
 	for {
@@ -64,50 +63,25 @@ func main() {
 			}
 
 			if c != 0 {
-				cell := &EdCell{c, scr.Fg, scr.Bg}
+				cell := view.NewCell(c)
 				ed.InsertCell(view.CurX, view.CurY, cell)
 				view.CurRight()
 			}
 
-			scr.Draw()
-
-			tb.SetCursor(view.CurX, view.CurY)
+			view.Draw()
 			flush()
 		}
 	}
 }
 
 type Screen struct {
-	CurX, CurY    int
 	Width, Height int
-	Fg, Bg        tb.Attribute
-	Ed            *Editor
-	View          *EdView
 }
 
 func NewScreen() *Screen {
-	ed := NewEditor()
 	w, h := tb.Size()
 	return &Screen{
-		Ed:     ed,
-		View:   NewView(ed),
 		Width:  w,
 		Height: h,
-		Fg:     tb.ColorDefault,
-		Bg:     tb.ColorDefault,
-	}
-}
-
-func (scr *Screen) Draw() {
-	tb.Clear(scr.Fg, scr.Bg)
-
-	x, y := 0, 0
-	for _, el := range scr.Ed.Lines {
-		for _, cell := range el {
-			printCell(x, y, cell)
-			x++
-		}
-		y++
-		x = 0
 	}
 }
