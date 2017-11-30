@@ -44,6 +44,7 @@ func main() {
 				fallthrough
 			case tb.KeyBackspace2:
 				view.CurLeft()
+				ed.DeleteCell(view.CurX, view.CurY)
 			case tb.KeyArrowUp:
 				view.CurUp()
 			case tb.KeyArrowDown:
@@ -55,8 +56,9 @@ func main() {
 			case tb.KeyHome:
 			case tb.KeyEnd:
 			case tb.KeyDelete:
+				ed.DeleteCell(view.CurX, view.CurY)
 			case tb.KeyEnter:
-				ed.InsertNewLine(view.CurY)
+				ed.InsertNewLine(view.CurX, view.CurY)
 				view.CurY++
 				view.CurX = 0
 			case 0:

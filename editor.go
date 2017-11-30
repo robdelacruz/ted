@@ -49,7 +49,7 @@ func (ed *Editor) ReplaceLine(y int, el EdLine) {
 func (ed *Editor) InsertCell(x, y int, cell *EdCell) {
 	// Carriage return, add new line below current line
 	if cell.Ch == '\n' {
-		ed.InsertNewLine(y)
+		ed.InsertNewLine(x, y)
 		return
 	}
 
@@ -69,8 +69,17 @@ func (ed *Editor) InsertLine(y int, el EdLine) {
 	ed.Lines[y] = el
 }
 
-func (ed *Editor) InsertNewLine(y int) {
-	ed.InsertLine(y+1, EdLine{})
+func (ed *Editor) InsertNewLine(x, y int) {
+	curLine := ed.Lines[y]
+	newLine := curLine[x:]
+	ed.Lines[y] = curLine[:x]
+
+	ed.InsertLine(y+1, newLine)
+}
+
+func (ed *Editor) DeleteCell(x, y int) {
+	curLine := ed.Lines[y]
+	ed.Lines[y] = curLine.DeleteCell(x)
 }
 
 // EdLine methods
@@ -95,6 +104,6 @@ func (el EdLine) DeleteCells(x, n int) EdLine {
 }
 
 func (el EdLine) DeleteCell(x int) EdLine {
-	el.DeleteCells(x, 1)
+	el = el.DeleteCells(x, 1)
 	return el
 }
