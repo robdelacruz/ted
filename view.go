@@ -89,10 +89,18 @@ draw1:
 		}
 	}
 
-	// Show cursor if within view bounds
+	// Compute view cursor in relation to doc cursor
 	curSetX := v.Left + (v.CurX % v.Width)
-	curSetY := v.Top + v.CurY + (v.CurX / v.Width)
-
+	curSetY := v.Top
+	for i := 0; i < v.CurY; i++ {
+		if i < len(v.Ed.Lines) {
+			line := v.Ed.Lines[i]
+			curSetY += len(line)/v.Width + 1
+		}
+	}
+	if v.CurY < len(v.Ed.Lines) {
+		curSetY += v.CurX / v.Width
+	}
 	tb.SetCursor(curSetX, curSetY)
 }
 
@@ -123,8 +131,8 @@ func (v *EdView) CurLeft() {
 	v.CurX--
 	if v.CurX < 0 {
 		if v.CurY > 0 {
-			v.CurX = len(v.currentLine()) - 1
 			v.CurY--
+			v.CurX = len(v.currentLine()) - 1
 		} else {
 			v.CurX++
 		}
@@ -135,8 +143,8 @@ func (v *EdView) CurRight() {
 	v.CurX++
 	if v.CurX > len(v.currentLine()) {
 		if v.CurY < len(v.Ed.Lines)-1 {
-			v.CurX = 0
 			v.CurY++
+			v.CurX = 0
 		} else {
 			v.CurX--
 		}
@@ -144,19 +152,56 @@ func (v *EdView) CurRight() {
 	v.BoundsCursor()
 }
 func (v *EdView) CurUp() {
-	v.CurX -= v.Width
-	if v.CurX < 0 {
-		v.CurX += v.Width
-		v.CurY--
+	if v.CurX > v.Width-1 {
+		// wrapped line
+		v.CurX -= v.Width
+		v.BoundsCursor()
+		return
 	}
+
+	if v.CurY == 0 {
+		return
+	}
+
+	// Go up one line
+	v.CurY--
+
+	// cursor is past rightmost char
+	if v.CurX > len(v.currentLine())-1 {
+		v.CurX = len(v.currentLine()) - 1
+		v.BoundsCursor()
+		return
+	}
+
+	// wrapped line adjustment
+	if len(v.currentLine()) > v.Width {
+		v.CurX += (len(v.currentLine()) / v.Width) * v.Width
+		v.BoundsCursor()
+		return
+	}
+
 	v.BoundsCursor()
 }
 func (v *EdView) CurDown() {
 	v.CurX += v.Width
-	if v.CurX > len(v.currentLine()) {
-		v.CurX -= v.Width
-		v.CurY++
+
+	// within wrapped line
+	if v.CurX < len(v.currentLine()) {
+		v.BoundsCursor()
+		return
 	}
+
+	v.CurX -= v.Width
+
+	// end of wrapped line
+	if (len(v.currentLine()) > v.Width) &&
+		(v.CurX < len(v.currentLine())-(len(v.currentLine())%v.Width)) {
+		v.CurX = len(v.currentLine()) - 1
+		v.BoundsCursor()
+		return
+	}
+
+	v.CurY++
 	v.BoundsCursor()
 }
 

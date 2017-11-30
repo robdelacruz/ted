@@ -57,7 +57,8 @@ func main() {
 			case tb.KeyDelete:
 			case tb.KeyEnter:
 				ed.InsertNewLine(view.CurY)
-				view.CurDown()
+				view.CurY++
+				view.CurX = 0
 			case 0:
 				c = e.Ch
 			}
