@@ -33,6 +33,14 @@ func NewView(ed *Editor, fg, bg tb.Attribute, left, top, width, height int) *EdV
 	return v
 }
 
+func (v *EdView) InsertLine(s string) {
+	el := EdLine{}
+	for i, c := range s {
+		el = el.InsertCell(i, v.NewCell(c))
+	}
+	v.Ed.InsertLine(len(v.Ed.Lines), el)
+}
+
 func (v *EdView) Draw() {
 	tb.Clear(v.Fg, v.Bg)
 
@@ -132,7 +140,7 @@ func (v *EdView) CurLeft() {
 	if v.CurX < 0 {
 		if v.CurY > 0 {
 			v.CurY--
-			v.CurX = len(v.currentLine()) - 1
+			v.CurX = len(v.currentLine())
 		} else {
 			v.CurX++
 		}

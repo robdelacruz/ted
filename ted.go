@@ -26,6 +26,10 @@ func main() {
 	ed := NewEditor()
 	view := NewView(ed, tb.ColorDefault, tb.ColorDefault, 10, 10, 15, 15)
 
+	view.InsertLine("Now is the time for all good men to come to the aid of the party.")
+	view.InsertLine("")
+	view.InsertLine("The quick brown fox jumps over the lazy dog.")
+
 	view.Draw()
 	flush()
 
