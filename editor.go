@@ -99,7 +99,17 @@ func (el EdLine) InsertCell(x int, cell *EdCell) EdLine {
 }
 
 func (el EdLine) DeleteCells(x, n int) EdLine {
-	el = append(el[:x], el[x+n:]...)
+	// Bounds checks
+	if x > len(el)-1 {
+		return el
+	}
+
+	rightStartBound := x + n
+	if rightStartBound > len(el) {
+		rightStartBound = len(el)
+	}
+
+	el = append(el[:x], el[rightStartBound:]...)
 	return el
 }
 

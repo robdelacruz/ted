@@ -37,6 +37,8 @@ func main() {
 			}
 
 			var c rune
+			prevCurX, prevCurY := view.CurX, view.CurY
+
 			switch e.Key {
 			case tb.KeySpace:
 				c = ' '
@@ -44,7 +46,10 @@ func main() {
 				fallthrough
 			case tb.KeyBackspace2:
 				view.CurLeft()
-				ed.DeleteCell(view.CurX, view.CurY)
+				if view.CurX != prevCurX || view.CurY != prevCurY {
+					_log.Printf("view.CurX=%d, view.CurY=%d\n", view.CurX, view.CurY)
+					ed.DeleteCell(view.CurX, view.CurY)
+				}
 			case tb.KeyArrowUp:
 				view.CurUp()
 			case tb.KeyArrowDown:
