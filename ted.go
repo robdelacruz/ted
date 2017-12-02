@@ -24,9 +24,9 @@ func main() {
 	defer tb.Close()
 
 	ed := NewEditor()
-	view := NewView(ed, tb.ColorDefault, tb.ColorDefault, 10, 10, 15, 15)
+	view := NewView(ed, tb.ColorDefault, tb.ColorDefault, 10, 10, 20, 25)
 
-	view.InsertLine("Now is the time for all good men to come to the aid of the party.")
+	view.InsertLine("Now is the time for all good men to come to the aid of the party. And supercalifragilisticexpialidocious, a really, really long word.")
 	view.InsertLine("")
 	view.InsertLine("The quick brown fox jumps over the lazy dog.")
 

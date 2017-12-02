@@ -1,6 +1,8 @@
 package main
 
 import (
+	"unicode"
+
 	tb "github.com/nsf/termbox-go"
 )
 
@@ -95,31 +97,78 @@ func clearRestOfLine(bufLine []*EdCell, x int) {
 	}
 }
 
-func (v *EdView) copyEdLineToBuf(l EdLine, y int) int {
-	x := 0
+// Parse an edline into sequence of words.
+// Each space char is represented as a single word.
+// Ex. "abc def  ghi" => ["abc", " ", "def", " ", " ", "ghi"
+func parseEdLineWords(l EdLine) (words [][]*EdCell) {
+	currentWord := []*EdCell{}
+
 	for _, c := range l {
-		if x > v.Width-1 {
+		if unicode.IsSpace(c.Ch) {
+			// Add pending word
+			words = append(words, currentWord)
+
+			// Add single space word
+			words = append(words, []*EdCell{c})
+
+			currentWord = []*EdCell{}
+			continue
+		}
+
+		// Add char to pending word
+		currentWord = append(currentWord, c)
+	}
+
+	if len(currentWord) > 0 {
+		words = append(words, currentWord)
+	}
+
+	return words
+}
+
+func writeLineToBuf(l EdLine, buf [][]*EdCell, y int) int {
+	words := parseEdLineWords(l)
+	x := 0
+
+	for _, word := range words {
+		// Word can't fit in remaining line
+		if (x + len(word) - 1) > (len(buf[y]) - 1) {
 			y++
 			x = 0
 		}
 
-		if y > len(v.buf)-1 {
+		if y > len(buf)-1 {
 			return y
 		}
 
-		v.buf[y][x] = c
-		x++
+		for _, c := range word {
+			buf[y][x] = c
+			x++
+
+			// Word is longer than buf width, so split it into
+			// multiple lines
+			if x > len(buf[y])-1 {
+				y++
+				x = 0
+
+				if y > len(buf)-1 {
+					return y
+				}
+			}
+		}
 	}
 
-	clearRestOfLine(v.buf[y], x)
+	clearRestOfLine(buf[y], x)
 	return y + 1
 }
 
-// Copy editor contents to view buffer
-func (v *EdView) copyEdToBuf() {
+func (v *EdView) writeEdToBuf() {
 	y := 0
-	for _, line := range v.Ed.Lines {
-		y = v.copyEdLineToBuf(line, y)
+	for _, l := range v.Ed.Lines {
+		y = writeLineToBuf(l, v.buf, y)
+		if y > len(v.buf)-1 {
+			return
+		}
 	}
 
 	for y < len(v.buf) {
@@ -133,7 +182,7 @@ func (v *EdView) Draw() {
 
 	v.drawBox(v.FrameLeft, v.FrameTop, v.FrameWidth, v.FrameHeight)
 
-	v.copyEdToBuf()
+	v.writeEdToBuf()
 
 	for y := 0; y < v.Height; y++ {
 		for x := 0; x < v.Width; x++ {
