@@ -15,8 +15,16 @@ type EdView struct {
 	Left, Top               int
 	Width, Height           int
 
+	// view buffer of {Height} lines of {Width} cells
+	// 1:1 map of termbox cells to be draw to the view
 	buf [][]*EdCell
+
+	// mapping between each cell in buf[][]
+	// to the x,y position of cell in Ed
+	edCurPos [][]CurPos
 }
+
+type CurPos struct{ X, Y int }
 
 func NewView(ed *Editor, fg, bg tb.Attribute, left, top, width, height int) *EdView {
 	v := &EdView{}
@@ -37,6 +45,9 @@ func NewView(ed *Editor, fg, bg tb.Attribute, left, top, width, height int) *EdV
 	for i := 0; i < v.Height; i++ {
 		bufLine := make([]*EdCell, v.Width)
 		v.buf = append(v.buf, bufLine)
+
+		posLine := make([]CurPos, v.Width)
+		v.edCurPos = append(v.edCurPos, posLine)
 	}
 
 	return v
@@ -126,26 +137,30 @@ func parseEdLineWords(l EdLine) (words [][]*EdCell) {
 	return words
 }
 
-func writeLineToBuf(l EdLine, buf [][]*EdCell, y int) int {
+func writeLineToBuf(l EdLine, yLine int, buf [][]*EdCell, edCurPos [][]CurPos, y int) int {
 	words := parseEdLineWords(l)
 	x := 0
 
 	for _, word := range words {
-		// Word can't fit in remaining line
+		// Not enough space in this line to fit word, try in next line
 		if (x + len(word) - 1) > (len(buf[y]) - 1) {
 			y++
 			x = 0
 		}
 
+		// Past bottom view line
 		if y > len(buf)-1 {
 			return y
 		}
 
-		for _, c := range word {
+		// Write word in remaining space
+		// Also remember editor cursor position for each char pos
+		for xLine, c := range word {
 			buf[y][x] = c
+			edCurPos[y][x] = CurPos{xLine, yLine}
 			x++
 
-			// Word is longer than buf width, so split it into
+			// Word is longer than entire buf width, so split it into
 			// multiple lines
 			if x > len(buf[y])-1 {
 				y++
@@ -164,8 +179,8 @@ func writeLineToBuf(l EdLine, buf [][]*EdCell, y int) int {
 
 func (v *EdView) writeEdToBuf() {
 	y := 0
-	for _, l := range v.Ed.Lines {
-		y = writeLineToBuf(l, v.buf, y)
+	for yLine, l := range v.Ed.Lines {
+		y = writeLineToBuf(l, yLine, v.buf, v.edCurPos, y)
 		if y > len(v.buf)-1 {
 			return
 		}
