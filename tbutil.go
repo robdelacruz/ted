@@ -19,10 +19,10 @@ func print(x, y int, fg, bg tb.Attribute, s string) {
 	}
 }
 
-func strToRuneCells(s string, fg, bg tb.Attribute) []EdCell {
-	var cells []EdCell
+func strToRuneCells(s string, fg, bg tb.Attribute) []*EdCell {
+	var cells []*EdCell
 	for _, c := range s {
-		cells = append(cells, EdCell{c, fg, bg})
+		cells = append(cells, &EdCell{c, fg, bg})
 	}
 	return cells
 }
@@ -31,7 +31,7 @@ func printCell(x, y int, cell *EdCell) {
 	tb.SetCell(x, y, cell.Ch, cell.Fg, cell.Bg)
 }
 
-func printRCs(x, y int, cells []*EdCell) {
+func printCells(x, y int, cells []*EdCell) {
 	for _, cell := range cells {
 		printCell(x, y, cell)
 		x++

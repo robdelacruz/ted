@@ -12,6 +12,8 @@ type EdView struct {
 	FrameWidth, FrameHeight int
 	Left, Top               int
 	Width, Height           int
+
+	buf [][]*EdCell
 }
 
 func NewView(ed *Editor, fg, bg tb.Attribute, left, top, width, height int) *EdView {
@@ -30,209 +32,169 @@ func NewView(ed *Editor, fg, bg tb.Attribute, left, top, width, height int) *EdV
 	v.Width = v.FrameWidth - 2
 	v.Height = v.FrameHeight - 2
 
+	for i := 0; i < v.Height; i++ {
+		bufLine := make([]*EdCell, v.Width)
+		v.buf = append(v.buf, bufLine)
+	}
+
 	return v
 }
 
 func (v *EdView) InsertLine(s string) {
-	el := EdLine{}
-	for i, c := range s {
-		el = el.InsertCell(i, v.NewCell(c))
+	l := EdLine(strToRuneCells(s, v.Fg, v.Bg))
+	v.Ed.InsertLine(len(v.Ed.Lines), l)
+}
+
+func (v *EdView) drawBox(x, y, width, height int) {
+	c := v.NewCell('┌')
+	printCell(x, y, c)
+	c.Ch = '┐'
+	printCell(x+width-1, y, c)
+
+	c.Ch = '─'
+	for i := x + 1; i < x+width-1; i++ {
+		printCell(i, y, c)
 	}
-	v.Ed.InsertLine(len(v.Ed.Lines), el)
+	for i := x + 1; i < x+width-1; i++ {
+		printCell(i, y+height-1, c)
+	}
+
+	c.Ch = '│'
+	for j := y + 1; j < y+height-1; j++ {
+		printCell(x, j, c)
+	}
+	for j := y + 1; j < y+height-1; j++ {
+		printCell(x+width-1, j, c)
+	}
+
+	c.Ch = '┘'
+	printCell(x+width-1, y+height-1, c)
+	c.Ch = '└'
+	printCell(x, y+height-1, c)
+}
+
+func (v *EdView) drawBuf() {
+	blankCell := v.NewCell(' ')
+
+	for y := 0; y < v.Height; y++ {
+		bufLine := v.buf[y]
+		for x := 0; x < v.Width; x++ {
+			if bufLine[x] == nil {
+				printCell(x, y, blankCell)
+				continue
+			}
+			printCell(x, y, bufLine[x])
+		}
+	}
+}
+
+func clearRestOfLine(bufLine []*EdCell, x int) {
+	for x < len(bufLine) {
+		bufLine[x] = nil
+		x++
+	}
+}
+
+func (v *EdView) copyEdLineToBuf(l EdLine, y int) int {
+	x := 0
+	for _, c := range l {
+		if x > v.Width-1 {
+			y++
+			x = 0
+		}
+
+		if y > len(v.buf)-1 {
+			return y
+		}
+
+		v.buf[y][x] = c
+		x++
+	}
+
+	clearRestOfLine(v.buf[y], x)
+	return y + 1
+}
+
+// Copy editor contents to view buffer
+func (v *EdView) copyEdToBuf() {
+	y := 0
+	for _, line := range v.Ed.Lines {
+		y = v.copyEdLineToBuf(line, y)
+	}
+
+	for y < len(v.buf) {
+		clearRestOfLine(v.buf[y], 0)
+		y++
+	}
 }
 
 func (v *EdView) Draw() {
 	tb.Clear(v.Fg, v.Bg)
 
-	// Border
-	c := v.NewCell('┌')
-	printCell(v.FrameLeft, v.FrameTop, c)
-	c.Ch = '┐'
-	printCell(v.FrameLeft+v.FrameWidth-1, v.FrameTop, c)
+	v.drawBox(v.FrameLeft, v.FrameTop, v.FrameWidth, v.FrameHeight)
 
-	c.Ch = '─'
-	for i := v.FrameLeft + 1; i < v.FrameLeft+v.FrameWidth-1; i++ {
-		printCell(i, v.FrameTop, c)
-	}
-	for i := v.FrameLeft + 1; i < v.FrameLeft+v.FrameWidth-1; i++ {
-		printCell(i, v.FrameTop+v.FrameHeight-1, c)
-	}
+	v.copyEdToBuf()
 
-	c.Ch = '│'
-	for j := v.FrameTop + 1; j < v.FrameTop+v.FrameHeight-1; j++ {
-		printCell(v.FrameLeft, j, c)
-	}
-	for j := v.FrameTop + 1; j < v.FrameTop+v.FrameHeight-1; j++ {
-		printCell(v.FrameLeft+v.FrameWidth-1, j, c)
-	}
-
-	c.Ch = '┘'
-	printCell(v.FrameLeft+v.FrameWidth-1, v.FrameTop+v.FrameHeight-1, c)
-	c.Ch = '└'
-	printCell(v.FrameLeft, v.FrameTop+v.FrameHeight-1, c)
-
-	// Content
-	x, y := v.Left, v.Top
-draw1:
-	for _, line := range v.Ed.Lines {
-		for _, cell := range line {
-			if x > v.Left+v.Width-1 {
-				y++
-				x = v.Left
-
-				if y > v.Top+v.Height-1 {
-					break draw1
-				}
+	for y := 0; y < v.Height; y++ {
+		for x := 0; x < v.Width; x++ {
+			cell := v.buf[y][x]
+			if cell != nil {
+				printCell(v.Left+x, v.Top+y, cell)
 			}
-
-			printCell(x, y, cell)
-			x++
-		}
-
-		y++
-		x = v.Left
-
-		if y > v.Top+v.Height-1 {
-			break
 		}
 	}
 
-	// Compute view cursor in relation to doc cursor
-	curSetX := v.Left + (v.CurX % v.Width)
-	curSetY := v.Top
-	for i := 0; i < v.CurY; i++ {
-		if i < len(v.Ed.Lines) {
-			line := v.Ed.Lines[i]
-			curSetY += len(line)/v.Width + 1
-		}
-	}
-	if v.CurY < len(v.Ed.Lines) {
-		curSetY += v.CurX / v.Width
-	}
-	tb.SetCursor(curSetX, curSetY)
+	tb.SetCursor(v.Left+v.CurX, v.Top+v.CurY)
 }
 
 // Make sure cursor stays within text bounds
 func (v *EdView) BoundsCursor() {
-	ed := v.Ed
-
 	if v.CurY < 0 {
 		v.CurY = 0
 	}
-	if v.CurY > len(ed.Lines)-1 {
-		v.CurY = len(ed.Lines) - 1
+	if v.CurY > v.Height-1 {
+		v.CurY = v.Height - 1
 	}
 
 	if v.CurX < 0 {
 		v.CurX = 0
 	}
-	if v.CurX > len(ed.Lines[v.CurY]) {
-		v.CurX = len(ed.Lines[v.CurY])
+	if v.CurX > v.Width-1 {
+		v.CurX = v.Width - 1
 	}
-}
-
-func (v *EdView) currentLine() EdLine {
-	return v.Ed.Line(v.CurY)
 }
 
 func (v *EdView) CurLeft() {
-	v.CurX--
-	if v.CurX < 0 {
-		if v.CurY > 0 {
-			v.CurY--
-			v.CurX = len(v.currentLine())
-		} else {
-			v.CurX++
-		}
-	}
-	v.BoundsCursor()
-}
-func (v *EdView) CurRight() {
-	v.CurX++
-	if v.CurX > len(v.currentLine()) {
-		if v.CurY < len(v.Ed.Lines)-1 {
-			v.CurY++
-			v.CurX = 0
-		} else {
-			v.CurX--
-		}
-	}
-	v.BoundsCursor()
-}
-func (v *EdView) CurUp() {
-	if v.CurX > v.Width-1 {
-		// wrapped line
-		v.CurX -= v.Width
-		v.BoundsCursor()
+	if v.CurX == 0 && v.CurY == 0 {
 		return
 	}
-
+	v.CurX--
+	if v.CurX < 0 {
+		v.CurY--
+		v.CurX = v.Width - 1
+	}
+}
+func (v *EdView) CurRight() {
+	if v.CurX == v.Width-1 && v.CurY == v.Height-1 {
+		return
+	}
+	v.CurX++
+	if v.CurX > v.Width-1 {
+		v.CurY++
+		v.CurX = 0
+	}
+}
+func (v *EdView) CurUp() {
 	if v.CurY == 0 {
 		return
 	}
-
-	// Go up one line
 	v.CurY--
-
-	// cursor is past rightmost char
-	if v.CurX > len(v.currentLine())-1 {
-		v.CurX = len(v.currentLine()) - 1
-		v.BoundsCursor()
-		return
-	}
-
-	// wrapped line adjustment
-	if len(v.currentLine()) > v.Width {
-		v.CurX += (len(v.currentLine()) / v.Width) * v.Width
-		v.BoundsCursor()
-		return
-	}
-
-	v.BoundsCursor()
 }
 func (v *EdView) CurDown() {
-	v.CurX += v.Width
-
-	// within wrapped line
-	if v.CurX < len(v.currentLine()) {
-		v.BoundsCursor()
+	if v.CurY == v.Height-1 {
 		return
 	}
-
-	v.CurX -= v.Width
-
-	// end of wrapped line
-	if (len(v.currentLine()) > v.Width) &&
-		(v.CurX < len(v.currentLine())-(len(v.currentLine())%v.Width)) {
-		v.CurX = len(v.currentLine()) - 1
-		v.BoundsCursor()
-		return
-	}
-
 	v.CurY++
-	v.BoundsCursor()
-}
-
-// Return whether cursor is in a wrapped line.
-// wrapped line = line length longer than view width
-func (v *EdView) IsWrapLine() bool {
-	line := v.Ed.Line(v.CurY)
-	if len(line) > v.Width {
-		return true
-	}
-	return false
-}
-
-// Return whether cursor is in the trailing part of a wrapped line.
-// trailing part = text that is 'wrapped' to the next line.
-func (v *EdView) IsTrailLine() bool {
-	if !v.IsWrapLine() {
-		return false
-	}
-	if v.CurX > v.Width-1 {
-		return true
-	}
-	return false
 }
 
 func (v *EdView) NewCell(c rune) *EdCell {
