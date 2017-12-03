@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	tb "github.com/nsf/termbox-go"
 )
 
@@ -26,9 +28,29 @@ func flush() {
 
 }
 
-func print(x, y int, fg, bg tb.Attribute, s string) {
+func print(s string, x, y int, fg, bg tb.Attribute) {
 	for _, c := range s {
 		tb.SetCell(x, y, c, fg, bg)
 		x++
 	}
+}
+
+func drawBox(x, y, width, height int, fg, bg tb.Attribute) {
+	print("┌", x, y, fg, bg)
+	print("┐", x+width-1, y, fg, bg)
+
+	hline := strings.Repeat("─", width-2)
+	print(hline, x+1, y, fg, bg)
+	print(hline, x+1, y+height-1, fg, bg)
+
+	vchar := "│"
+	for j := y + 1; j < y+height-1; j++ {
+		print(vchar, x, j, fg, bg)
+	}
+	for j := y + 1; j < y+height-1; j++ {
+		print(vchar, x+width-1, j, fg, bg)
+	}
+
+	print("┘", x+width-1, y+height-1, fg, bg)
+	print("└", x, y+height-1, fg, bg)
 }

@@ -26,10 +26,22 @@ func main() {
 	buf := NewBuf()
 	buf.WriteString("Now is the time for all good men to come to the aid of the party.")
 	buf.WriteString("")
+	buf.WriteString("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
 	buf.WriteString("The quick brown fox jumps over the lazy dog.")
 
 	view := NewView(10, 10, 25, 15, buf)
 
+	tb.Clear(0, 0)
 	view.Draw()
+	flush()
+
+	for {
+		e := tb.PollEvent()
+		if e.Type == tb.EventKey {
+			if e.Key == tb.KeyEsc {
+				break
+			}
+		}
+	}
 
 }
