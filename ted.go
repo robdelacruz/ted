@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -33,9 +34,12 @@ func main() {
 
 	//view := NewView(10, 10, 25, 15, buf)
 	view := NewView(20, 20, 40, 10, buf)
+	p := NewPanel(view.Border.X, view.Border.Y+view.Border.Height,
+		view.Border.Width, 10, "x:0 y:0")
 
 	tb.Clear(0, 0)
 	view.Draw()
+	p.Draw()
 	flush()
 
 	for {
@@ -47,7 +51,13 @@ func main() {
 		}
 
 		view.HandleEvent(&e)
+
+		textPos := view.TextPos()
+		p.Text = fmt.Sprintf("x:%d y:%d", textPos.X, textPos.Y)
+
+		tb.Clear(0, 0)
 		view.Draw()
+		p.Draw()
 		flush()
 	}
 

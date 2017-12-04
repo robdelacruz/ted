@@ -6,7 +6,7 @@ import (
 
 type View struct {
 	Area
-	border Area
+	Border Area
 	*Buf
 	*TextBlk
 	Cur Pos
@@ -19,7 +19,7 @@ func NewView(x, y, w, h int, buf *Buf) *View {
 
 	view := &View{
 		Area:    area,
-		border:  border,
+		Border:  border,
 		Buf:     buf,
 		TextBlk: textBlk,
 		Cur:     Pos{0, 0},
@@ -35,7 +35,7 @@ func min(n1, n2 int) int {
 }
 
 func (v *View) Draw() {
-	drawBox(v.border.X, v.border.Y, v.border.Width, v.border.Height, 0, 0)
+	drawBox(v.Border.X, v.Border.Y, v.Border.Width, v.Border.Height, 0, 0)
 
 	FillTextBlk(v.TextBlk, v.Buf)
 
@@ -199,4 +199,14 @@ func (v *View) CurDown() {
 			}
 		}
 	}
+}
+
+func (v *View) TextPos() Pos {
+	curX, curY := v.Cur.X, v.Cur.Y
+	if curY >= 0 && curY < v.TextBlk.Height &&
+		curX >= 0 && curX < v.TextBlk.Width {
+		return v.TextBlk.PosMap[curY][curX]
+	}
+
+	return Pos{0, 0}
 }
