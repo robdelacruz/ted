@@ -5,7 +5,8 @@ import (
 )
 
 type TextBlk struct {
-	Text [][]rune
+	Text   [][]rune // A block of text, with line wrapping
+	PosMap [][]Pos  // Absolute line position ignoring line wrapping
 	Size
 }
 
@@ -22,19 +23,27 @@ func (blk *TextBlk) Resize(width, height int) {
 		for y := 0; y < height-blk.Height; y++ {
 			row := make([]rune, width)
 			blk.Text = append(blk.Text, row)
+
+			posRow := make([]Pos, width)
+			blk.PosMap = append(blk.PosMap, posRow)
 		}
 	} else if height < blk.Height {
 		blk.Text = blk.Text[:height]
+		blk.PosMap = blk.PosMap[:height]
 	}
 
 	if width > blk.Width {
 		for y := range blk.Text {
 			addlRunes := make([]rune, width-blk.Width)
 			blk.Text[y] = append(blk.Text[y], addlRunes...)
+
+			addlPos := make([]Pos, width-blk.Width)
+			blk.PosMap[y] = append(blk.PosMap[y], addlPos...)
 		}
 	} else if width < blk.Width {
 		for y := range blk.Text {
 			blk.Text[y] = blk.Text[y][:width]
+			blk.PosMap[y] = blk.PosMap[y][:width]
 		}
 	}
 
@@ -53,6 +62,7 @@ func (blk *TextBlk) AddCols(n int) {
 func (blk *TextBlk) ClearRow(row, colStart int) {
 	for col := colStart; col < blk.Width; col++ {
 		blk.Text[row][col] = 0
+		blk.PosMap[row][col] = Pos{0, 0}
 	}
 }
 
@@ -88,10 +98,12 @@ func parseWords(s string) []string {
 
 // Write str line into startRow,
 // return next row to write succeeding lines.
-func (blk *TextBlk) writeLineStartRow(l string, startRow int) (nextRow int) {
+func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow int) {
 	words := parseWords(l)
 	x := 0
 	y := startRow
+
+	xPos := 0
 
 	for _, word := range words {
 		// Not enough space in this line to fit word, try in next line.
@@ -108,7 +120,10 @@ func (blk *TextBlk) writeLineStartRow(l string, startRow int) (nextRow int) {
 		// Write word in remaining space.
 		for _, c := range word {
 			blk.Text[y][x] = c
+			blk.PosMap[y][x] = Pos{xPos, yPos}
+
 			x++
+			xPos++
 
 			// If word is longer than entire textblk width,
 			// split word into multiple lines.
@@ -145,8 +160,8 @@ func (blk *TextBlk) WriteStringLines(lines []string) {
 	blk.Resize(blk.Width, len(lines))
 
 	yblk := 0
-	for _, l := range lines {
-		yblk = blk.writeLineStartRow(l, yblk)
+	for yPos, l := range lines {
+		yblk = blk.writeLineStartRow(l, yPos, yblk)
 	}
 }
 
