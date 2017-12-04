@@ -27,15 +27,15 @@ func main() {
 	buf.WriteString("Now is the time for all good men to come to the aid of the party.")
 	buf.WriteString("")
 	buf.WriteString("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
-	buf.WriteString("The quick brown fox jumps over the lazy dog.")
+	buf.WriteString("The quick brown fox jumps over the 123")
+	buf.WriteString("The quick brown fox jumps over the 123")
 	buf.WriteString("Last line!")
 
-	view := NewView(10, 10, 25, 15, buf)
-	view2 := NewView(20, 20, 40, 10, buf)
+	//view := NewView(10, 10, 25, 15, buf)
+	view := NewView(20, 20, 40, 10, buf)
 
 	tb.Clear(0, 0)
 	view.Draw()
-	view2.Draw()
 	flush()
 
 	for {
@@ -45,6 +45,10 @@ func main() {
 				break
 			}
 		}
+
+		view.HandleEvent(&e)
+		view.Draw()
+		flush()
 	}
 
 }
