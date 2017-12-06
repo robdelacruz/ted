@@ -59,10 +59,11 @@ func (blk *TextBlk) AddCols(n int) {
 	blk.Resize(blk.Width+n, blk.Height)
 }
 
-func (blk *TextBlk) ClearRow(row, colStart int) {
+func (blk *TextBlk) ClearRow(row, colStart, yPos, xPos int) {
 	for col := colStart; col < blk.Width; col++ {
 		blk.Text[row][col] = 0
-		blk.PosMap[row][col] = Pos{0, 0}
+		blk.PosMap[row][col] = Pos{xPos, yPos}
+		xPos++
 	}
 }
 
@@ -108,6 +109,7 @@ func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow
 	for _, word := range words {
 		// Not enough space in this line to fit word, try in next line.
 		if (x + len(word) - 1) > (blk.Width - 1) {
+			blk.ClearRow(y, x, yPos, xPos)
 			y++
 			x = 0
 		}
@@ -145,10 +147,7 @@ func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow
 		return nextRow
 	}
 
-	blk.ClearRow(y, x)
-
-	// Remember pos in blk cell past the right edge.
-	blk.PosMap[y][x] = Pos{xPos, yPos}
+	blk.ClearRow(y, x, yPos, xPos)
 
 	nextRow = y + 1
 	return nextRow

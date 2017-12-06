@@ -136,6 +136,18 @@ func (v *View) IsNilLeftCur() bool {
 	}
 	return false
 }
+func (v *View) IsBOFCur() bool {
+	if v.Cur.Y == 0 && v.Cur.X == 0 {
+		return true
+	}
+	return false
+}
+func (v *View) IsEOFCur() bool {
+	if v.Cur.Y >= v.TextBlk.Height-1 && v.Cur.X >= v.TextBlk.Width-1 {
+		return true
+	}
+	return false
+}
 func (v *View) InBoundsCur() bool {
 	if v.Cur.X >= 0 && v.Cur.X < v.Area.Width &&
 		v.Cur.Y >= 0 && v.Cur.Y < v.Area.Height {
@@ -145,7 +157,7 @@ func (v *View) InBoundsCur() bool {
 }
 
 func (v *View) CurLeft() {
-	if !v.IsNilCur() || v.Cur.X == 0 {
+	if !v.IsBOFCur() {
 		v.Cur.X--
 	}
 
@@ -211,11 +223,5 @@ func (v *View) CurDown() {
 }
 
 func (v *View) TextPos() Pos {
-	curX, curY := v.Cur.X, v.Cur.Y
-	if curY >= 0 && curY < v.TextBlk.Height &&
-		curX >= 0 && curX < v.TextBlk.Width {
-		return v.TextBlk.PosMap[curY][curX]
-	}
-
-	return Pos{0, 0}
+	return v.TextBlk.PosMap[v.Cur.Y][v.Cur.X]
 }
