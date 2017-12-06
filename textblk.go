@@ -147,6 +147,9 @@ func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow
 
 	blk.ClearRow(y, x)
 
+	// Remember pos in blk cell past the right edge.
+	blk.PosMap[y][x] = Pos{xPos, yPos}
+
 	nextRow = y + 1
 	return nextRow
 }

@@ -28,7 +28,7 @@ func main() {
 	buf.WriteString("Now is the time for all good men to come to the aid of the party.")
 	buf.WriteString("")
 	buf.WriteString("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
-	buf.WriteString("The quick brown fox jumps over the 123")
+	buf.WriteString("")
 	buf.WriteString("The quick brown fox jumps over the 123")
 	buf.WriteString("Last line!")
 
