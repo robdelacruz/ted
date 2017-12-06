@@ -78,6 +78,9 @@ func (v *View) HandleEvent(e *tb.Event) {
 
 	// Char entered
 	if c != 0 {
+		//		bufPos := v.BufPos()
+		//		v.Buf.InsChar(c, bufPos.X, bufPos.Y)
+		//		v.CurRight()
 	}
 }
 
@@ -222,6 +225,6 @@ func (v *View) CurDown() {
 	}
 }
 
-func (v *View) TextPos() Pos {
-	return v.TextBlk.PosMap[v.Cur.Y][v.Cur.X]
+func (v *View) BufPos() Pos {
+	return v.TextBlk.BufPos[v.Cur.Y][v.Cur.X]
 }

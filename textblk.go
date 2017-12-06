@@ -6,7 +6,7 @@ import (
 
 type TextBlk struct {
 	Text   [][]rune // A block of text, with line wrapping
-	PosMap [][]Pos  // Absolute line position ignoring line wrapping
+	BufPos [][]Pos  // Absolute line position ignoring line wrapping
 	Size
 }
 
@@ -25,11 +25,11 @@ func (blk *TextBlk) Resize(width, height int) {
 			blk.Text = append(blk.Text, row)
 
 			posRow := make([]Pos, width)
-			blk.PosMap = append(blk.PosMap, posRow)
+			blk.BufPos = append(blk.BufPos, posRow)
 		}
 	} else if height < blk.Height {
 		blk.Text = blk.Text[:height]
-		blk.PosMap = blk.PosMap[:height]
+		blk.BufPos = blk.BufPos[:height]
 	}
 
 	if width > blk.Width {
@@ -38,12 +38,12 @@ func (blk *TextBlk) Resize(width, height int) {
 			blk.Text[y] = append(blk.Text[y], addlRunes...)
 
 			addlPos := make([]Pos, width-blk.Width)
-			blk.PosMap[y] = append(blk.PosMap[y], addlPos...)
+			blk.BufPos[y] = append(blk.BufPos[y], addlPos...)
 		}
 	} else if width < blk.Width {
 		for y := range blk.Text {
 			blk.Text[y] = blk.Text[y][:width]
-			blk.PosMap[y] = blk.PosMap[y][:width]
+			blk.BufPos[y] = blk.BufPos[y][:width]
 		}
 	}
 
@@ -62,7 +62,7 @@ func (blk *TextBlk) AddCols(n int) {
 func (blk *TextBlk) ClearRow(row, colStart, yPos, xPos int) {
 	for col := colStart; col < blk.Width; col++ {
 		blk.Text[row][col] = 0
-		blk.PosMap[row][col] = Pos{xPos, yPos}
+		blk.BufPos[row][col] = Pos{xPos, yPos}
 		xPos++
 	}
 }
@@ -122,7 +122,7 @@ func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow
 		// Write word in remaining space.
 		for _, c := range word {
 			blk.Text[y][x] = c
-			blk.PosMap[y][x] = Pos{xPos, yPos}
+			blk.BufPos[y][x] = Pos{xPos, yPos}
 
 			x++
 			xPos++

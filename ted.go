@@ -25,12 +25,12 @@ func main() {
 	defer tb.Close()
 
 	buf := NewBuf()
-	buf.WriteString("Now is the time for all good men to come to the aid of the party.")
-	buf.WriteString("")
-	buf.WriteString("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
-	buf.WriteString("")
-	buf.WriteString("The quick brown fox jumps over the 123")
-	buf.WriteString("Last line!")
+	buf.WriteLine("Now is the time for all good men to come to the aid of the party.")
+	buf.WriteLine("")
+	buf.WriteLine("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
+	buf.WriteLine("")
+	buf.WriteLine("The quick brown fox jumps over the 123")
+	buf.WriteLine("Last line!")
 
 	//view := NewView(10, 10, 25, 15, buf)
 	view := NewView(20, 20, 40, 10, buf)
@@ -52,8 +52,8 @@ func main() {
 
 		view.HandleEvent(&e)
 
-		textPos := view.TextPos()
-		p.Text = fmt.Sprintf("x:%d y:%d", textPos.X, textPos.Y)
+		bufPos := view.BufPos()
+		p.Text = fmt.Sprintf("x:%d y:%d", bufPos.X, bufPos.Y)
 
 		tb.Clear(0, 0)
 		view.Draw()
