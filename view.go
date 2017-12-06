@@ -127,6 +127,15 @@ func (v *View) CurChar() rune {
 func (v *View) IsNilCur() bool {
 	return v.CurChar() == 0
 }
+func (v *View) IsNilLeftCur() bool {
+	if v.Cur.X == 0 {
+		return true
+	}
+	if v.TextBlk.Text[v.Cur.Y][v.Cur.X-1] == 0 {
+		return true
+	}
+	return false
+}
 func (v *View) InBoundsCur() bool {
 	if v.Cur.X >= 0 && v.Cur.X < v.Area.Width &&
 		v.Cur.Y >= 0 && v.Cur.Y < v.Area.Height {
@@ -156,15 +165,15 @@ func (v *View) CurLeft() {
 	}
 }
 func (v *View) CurRight() {
-	if !v.IsNilCur() {
-		v.Cur.X++
-	}
+	v.Cur.X++
 
 	// Past right margin, wrap to next line if there's room.
-	if v.Cur.X > v.Area.Width-1 || v.IsNilCur() {
+	if v.Cur.X > v.Area.Width-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
 		if v.Cur.Y < v.TextBlk.Height-1 {
 			v.Cur.X = 0
 			v.Cur.Y++
+		} else {
+			v.Cur.X--
 		}
 	}
 }
