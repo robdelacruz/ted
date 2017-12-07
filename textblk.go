@@ -104,6 +104,11 @@ func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow
 	x := 0
 	y := startRow
 
+	// Add new rows as needed.
+	if y > blk.Height-1 {
+		blk.AddRows(1)
+	}
+
 	xPos := 0
 
 	for _, word := range words {
@@ -159,7 +164,8 @@ func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow
 // textblk is auto-resized (rows are added when needed) to fit
 // the string lines.
 func (blk *TextBlk) WriteStringLines(lines []string) {
-	blk.Resize(blk.Width, len(lines))
+	//blk.Resize(blk.Width, len(lines))
+	blk.Resize(blk.Width, 1)
 
 	yblk := 0
 	for yPos, l := range lines {

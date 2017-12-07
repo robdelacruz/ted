@@ -71,6 +71,8 @@ func (v *View) HandleEvent(e *tb.Event) {
 			v.CurUp()
 		case tb.KeyArrowDown:
 			v.CurDown()
+		case tb.KeySpace:
+			c = ' '
 		case 0:
 			c = e.Ch
 		}
@@ -78,9 +80,9 @@ func (v *View) HandleEvent(e *tb.Event) {
 
 	// Char entered
 	if c != 0 {
-		//		bufPos := v.BufPos()
-		//		v.Buf.InsChar(c, bufPos.X, bufPos.Y)
-		//		v.CurRight()
+		bufPos := v.BufPos()
+		v.Buf.InsChar(c, bufPos.X, bufPos.Y)
+		v.CurRight()
 	}
 }
 

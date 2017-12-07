@@ -39,7 +39,6 @@ func (buf *Buf) WriteLine(s string) {
 
 func (buf *Buf) InsChar(c rune, x, y int) {
 	if !buf.InWriteBounds(x, y) {
-		_log.Printf("!InWriteBounds(%d,%d)\n", x, y)
 		return
 	}
 
@@ -56,5 +55,4 @@ func (buf *Buf) InsChar(c rune, x, y int) {
 	copy(line[x+1:], line[x:])
 	line[x] = c
 	buf.Lines[y] = string(line)
-	_log.Printf("(%d,%d): %s\n", x, y, string(line))
 }
