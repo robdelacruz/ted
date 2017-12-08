@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	tb "github.com/nsf/termbox-go"
@@ -18,6 +19,10 @@ func NewArea(x, y, w, h int) Area {
 		Pos:  Pos{x, y},
 		Size: Size{w, h},
 	}
+}
+
+func (pos *Pos) String() string {
+	return fmt.Sprintf("%d,%d", pos.X, pos.Y)
 }
 
 func flush() {

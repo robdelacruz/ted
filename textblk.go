@@ -5,13 +5,18 @@ import (
 )
 
 type TextBlk struct {
-	Text   [][]rune // A block of text, with line wrapping
-	BufPos [][]Pos  // Absolute line position ignoring line wrapping
+	Text       [][]rune    // A block of text, with line wrapping
+	BufFromBlk map[Pos]Pos // Buf pos corresponding to blk pos
+	BlkFromBuf map[Pos]Pos // Blk pos corresponding to buf pos
 	Size
+	Cur Pos
 }
 
 func NewTextBlk(width, height int) *TextBlk {
 	blk := &TextBlk{}
+	blk.BufFromBlk = map[Pos]Pos{}
+	blk.BlkFromBuf = map[Pos]Pos{}
+
 	blk.Resize(width, height)
 
 	return blk
@@ -23,27 +28,19 @@ func (blk *TextBlk) Resize(width, height int) {
 		for y := 0; y < height-blk.Height; y++ {
 			row := make([]rune, width)
 			blk.Text = append(blk.Text, row)
-
-			posRow := make([]Pos, width)
-			blk.BufPos = append(blk.BufPos, posRow)
 		}
 	} else if height < blk.Height {
 		blk.Text = blk.Text[:height]
-		blk.BufPos = blk.BufPos[:height]
 	}
 
 	if width > blk.Width {
 		for y := range blk.Text {
 			addlRunes := make([]rune, width-blk.Width)
 			blk.Text[y] = append(blk.Text[y], addlRunes...)
-
-			addlPos := make([]Pos, width-blk.Width)
-			blk.BufPos[y] = append(blk.BufPos[y], addlPos...)
 		}
 	} else if width < blk.Width {
 		for y := range blk.Text {
 			blk.Text[y] = blk.Text[y][:width]
-			blk.BufPos[y] = blk.BufPos[y][:width]
 		}
 	}
 
@@ -59,11 +56,14 @@ func (blk *TextBlk) AddCols(n int) {
 	blk.Resize(blk.Width+n, blk.Height)
 }
 
-func (blk *TextBlk) ClearRow(row, colStart, yPos, xPos int) {
-	for col := colStart; col < blk.Width; col++ {
-		blk.Text[row][col] = 0
-		blk.BufPos[row][col] = Pos{xPos, yPos}
-		xPos++
+func (blk *TextBlk) ClearRow(yBlk, xBlkStart, yBuf, xBuf int) {
+	for xBlk := xBlkStart; xBlk < blk.Width; xBlk++ {
+		blk.Text[yBlk][xBlk] = 0
+
+		blk.BufFromBlk[Pos{xBlk, yBlk}] = Pos{xBuf, yBuf}
+		blk.BlkFromBuf[Pos{xBuf, yBuf}] = Pos{xBlk, yBlk}
+
+		xBuf++
 	}
 }
 
@@ -97,49 +97,52 @@ func parseWords(s string) []string {
 	return words
 }
 
-// Write str line into startRow,
-// return next row to write succeeding lines.
-func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow int) {
-	words := parseWords(l)
-	x := 0
-	y := startRow
+// Write buf line (buf[yBuf]) into blk.
+// Return next available blk row.
+func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
+	words := parseWords(buf.Lines[yBuf])
+	xBlk := 0
 
 	// Add new rows as needed.
-	if y > blk.Height-1 {
+	if yBlk > blk.Height-1 {
 		blk.AddRows(1)
 	}
 
-	xPos := 0
+	xBuf := 0
 
 	for _, word := range words {
 		// Not enough space in this line to fit word, try in next line.
-		if (x + len(word) - 1) > (blk.Width - 1) {
-			blk.ClearRow(y, x, yPos, xPos)
-			y++
-			x = 0
+		if (xBlk + len(word) - 1) > (blk.Width - 1) {
+			blk.ClearRow(yBlk, xBlk, yBuf, xBuf)
+			yBlk++
+			xBlk = 0
 		}
 
 		// Add new rows as needed.
-		if y > blk.Height-1 {
+		if yBlk > blk.Height-1 {
 			blk.AddRows(1)
 		}
 
 		// Write word in remaining space.
 		for _, c := range word {
-			blk.Text[y][x] = c
-			blk.BufPos[y][x] = Pos{xPos, yPos}
+			blk.Text[yBlk][xBlk] = c
 
-			x++
-			xPos++
+			blkPos := Pos{xBlk, yBlk}
+			bufPos := Pos{xBuf, yBuf}
+			blk.BufFromBlk[blkPos] = bufPos
+			blk.BlkFromBuf[bufPos] = blkPos
+
+			xBlk++
+			xBuf++
 
 			// If word is longer than entire textblk width,
 			// split word into multiple lines.
-			if x > blk.Width-1 {
-				y++
-				x = 0
+			if xBlk > blk.Width-1 {
+				yBlk++
+				xBlk = 0
 
 				// Add new rows as needed.
-				if y > blk.Height-1 {
+				if yBlk > blk.Height-1 {
 					blk.AddRows(1)
 				}
 			}
@@ -147,32 +150,32 @@ func (blk *TextBlk) writeLineStartRow(l string, yPos int, startRow int) (nextRow
 	}
 
 	// Last word ended exactly at txtblk edge, so already at next row.
-	if x == 0 && len(words) > 0 {
-		nextRow = y
-		return nextRow
+	if xBlk == 0 && len(words) > 0 {
+		return yBlk
 	}
 
-	blk.ClearRow(y, x, yPos, xPos)
-
-	nextRow = y + 1
-	return nextRow
+	blk.ClearRow(yBlk, xBlk, yBuf, xBuf)
+	return yBlk + 1
 }
 
-// Write sequence of string lines into textblk, one line at a time,
-// wrapping text into rows separated by word boundaries.
+// Write buf lines to textblk, line wrapping text on word boundaries
+// as necessary to fit the textblk width.
 //
-// textblk is auto-resized (rows are added when needed) to fit
-// the string lines.
-func (blk *TextBlk) WriteStringLines(lines []string) {
-	//blk.Resize(blk.Width, len(lines))
-	blk.Resize(blk.Width, 1)
+// textblk is auto-resized as needed to fit the number of buf lines.
+func (blk *TextBlk) FillWithBuf(buf *Buf) {
+	bufPos := blk.BufPos()
 
-	yblk := 0
-	for yPos, l := range lines {
-		yblk = blk.writeLineStartRow(l, yPos, yblk)
+	yBlk := 0
+	for yBuf := range buf.Lines {
+		yBlk = blk.writeBufLine(buf, yBuf, yBlk)
 	}
+
+	blk.Cur = blk.BlkFromBuf[bufPos]
 }
 
-func FillTextBlk(blk *TextBlk, buf *Buf) {
-	blk.WriteStringLines(buf.Lines)
+func (blk *TextBlk) BlkPos() Pos {
+	return blk.Cur
+}
+func (blk *TextBlk) BufPos() Pos {
+	return blk.BufFromBlk[Pos{blk.Cur.X, blk.Cur.Y}]
 }

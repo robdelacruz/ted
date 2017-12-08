@@ -9,7 +9,6 @@ type View struct {
 	Border Area
 	*Buf
 	*TextBlk
-	Cur Pos
 }
 
 func NewView(x, y, w, h int, buf *Buf) *View {
@@ -22,7 +21,6 @@ func NewView(x, y, w, h int, buf *Buf) *View {
 		Border:  border,
 		Buf:     buf,
 		TextBlk: textBlk,
-		Cur:     Pos{0, 0},
 	}
 	return view
 }
@@ -36,9 +34,7 @@ func min(n1, n2 int) int {
 
 func (v *View) Draw() {
 	drawBox(v.Border.X, v.Border.Y, v.Border.Width, v.Border.Height, 0, 0)
-
-	FillTextBlk(v.TextBlk, v.Buf)
-
+	v.TextBlk.FillWithBuf(v.Buf)
 	v.drawText()
 
 	tb.SetCursor(v.Area.X+v.Cur.X, v.Area.Y+v.Cur.Y)
@@ -86,40 +82,12 @@ func (v *View) HandleEvent(e *tb.Event) {
 	}
 }
 
-func (v *View) CurXInc() bool {
-	if v.Cur.X == v.Area.Width-1 && v.Cur.Y == v.Area.Height-1 {
-		return false
+func (v *View) InBoundsCur() bool {
+	if v.Cur.X >= 0 && v.Cur.X < v.Area.Width &&
+		v.Cur.Y >= 0 && v.Cur.Y < v.Area.Height {
+		return true
 	}
-
-	v.Cur.X++
-	if v.Cur.X > v.Area.Width-1 {
-		v.Cur.Y++
-		v.Cur.X = 0
-	}
-	return true
-}
-func (v *View) CurXDec() {
-	if v.Cur.X == 0 && v.Cur.Y == 0 {
-		return
-	}
-
-	v.Cur.X--
-	if v.Cur.X < 0 {
-		v.Cur.Y--
-		v.Cur.X = v.Area.Width - 1
-	}
-}
-func (v *View) CurYInc() {
-	if v.Cur.Y == v.Cur.Y-1 {
-		return
-	}
-	v.Cur.Y++
-}
-func (v *View) CurYDec() {
-	if v.Cur.Y == 0 {
-		return
-	}
-	v.Cur.Y--
+	return false
 }
 
 // Return char under the cursor or 0 if out of bounds.
@@ -149,13 +117,6 @@ func (v *View) IsBOFCur() bool {
 }
 func (v *View) IsEOFCur() bool {
 	if v.Cur.Y >= v.TextBlk.Height-1 && v.Cur.X >= v.TextBlk.Width-1 {
-		return true
-	}
-	return false
-}
-func (v *View) InBoundsCur() bool {
-	if v.Cur.X >= 0 && v.Cur.X < v.Area.Width &&
-		v.Cur.Y >= 0 && v.Cur.Y < v.Area.Height {
 		return true
 	}
 	return false
@@ -225,8 +186,4 @@ func (v *View) CurDown() {
 			}
 		}
 	}
-}
-
-func (v *View) BufPos() Pos {
-	return v.TextBlk.BufPos[v.Cur.Y][v.Cur.X]
 }
