@@ -24,7 +24,8 @@ func (buf *Buf) InWriteBounds(x, y int) bool {
 	if y > nLines {
 		return false
 	}
-	if y < nLines && x > len(buf.Lines[y]) {
+	line := []rune(buf.Lines[y])
+	if y < nLines && x > len(line) {
 		return false
 	}
 	if y == nLines && x > 0 {
@@ -37,26 +38,23 @@ func (buf *Buf) WriteLine(s string) {
 	buf.Lines = append(buf.Lines, s)
 }
 
+func (buf *Buf) InsEOL(s string, x, y int) {
+}
+
 func (buf *Buf) InsChar(c rune, x, y int) {
-	if y < 0 || x < 0 {
-		return
-	}
-	nLines := len(buf.Lines)
-	if y > nLines {
-		return
-	}
-	line := []rune(buf.Lines[y])
-	if y < nLines && x > len(line) {
+	if !buf.InWriteBounds(x, y) {
 		return
 	}
 
 	// Insert new line with char.
+	nLines := len(buf.Lines)
 	if y == nLines {
 		buf.WriteLine(string(c))
 		return
 	}
 
 	// Replace existing line, insert char.
+	line := []rune(buf.Lines[y])
 	line = append(line, 0)
 	if x < len(line)-1 {
 		copy(line[x+1:], line[x:])
