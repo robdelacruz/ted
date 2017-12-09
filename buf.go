@@ -38,21 +38,29 @@ func (buf *Buf) WriteLine(s string) {
 }
 
 func (buf *Buf) InsChar(c rune, x, y int) {
-	if !buf.InWriteBounds(x, y) {
+	if y < 0 || x < 0 {
+		return
+	}
+	nLines := len(buf.Lines)
+	if y > nLines {
+		return
+	}
+	line := []rune(buf.Lines[y])
+	if y < nLines && x > len(line) {
 		return
 	}
 
 	// Insert new line with char.
-	nLines := len(buf.Lines)
 	if y == nLines {
 		buf.WriteLine(string(c))
 		return
 	}
 
 	// Replace existing line, insert char.
-	line := []rune(buf.Lines[y])
 	line = append(line, 0)
-	copy(line[x+1:], line[x:])
+	if x < len(line)-1 {
+		copy(line[x+1:], line[x:])
+	}
 	line[x] = c
 	buf.Lines[y] = string(line)
 }

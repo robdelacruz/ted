@@ -36,7 +36,9 @@ func (v *View) Draw() {
 	drawBox(v.Border.X, v.Border.Y, v.Border.Width, v.Border.Height, 0, 0)
 	v.TextBlk.FillWithBuf(v.Buf)
 	v.drawText()
+}
 
+func (v *View) DrawCursor() {
 	tb.SetCursor(v.Area.X+v.Cur.X, v.Area.Y+v.Cur.Y)
 }
 
@@ -78,8 +80,15 @@ func (v *View) HandleEvent(e *tb.Event) {
 	if c != 0 {
 		bufPos := v.BufPos()
 		v.Buf.InsChar(c, bufPos.X, bufPos.Y)
+		v.Draw()
+
 		v.CurRight()
+		v.DrawCursor()
+		return
 	}
+
+	v.Draw()
+	v.DrawCursor()
 }
 
 func (v *View) InBoundsCur() bool {

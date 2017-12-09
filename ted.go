@@ -39,6 +39,7 @@ func main() {
 
 	tb.Clear(0, 0)
 	view.Draw()
+	view.DrawCursor()
 	p.Draw()
 	flush()
 
@@ -50,13 +51,11 @@ func main() {
 			}
 		}
 
-		view.HandleEvent(&e)
-
 		bufPos := view.BufPos()
 		p.Text = fmt.Sprintf("x:%d y:%d", bufPos.X, bufPos.Y)
 
 		tb.Clear(0, 0)
-		view.Draw()
+		view.HandleEvent(&e)
 		p.Draw()
 		flush()
 	}
