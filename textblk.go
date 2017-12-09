@@ -149,12 +149,13 @@ func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
 		}
 	}
 
+	blk.ClearRow(yBlk, xBlk, yBuf, xBuf)
+
 	// Last word ended exactly at txtblk edge, so already at next row.
 	if xBlk == 0 && len(words) > 0 {
 		return yBlk
 	}
 
-	blk.ClearRow(yBlk, xBlk, yBuf, xBuf)
 	return yBlk + 1
 }
 

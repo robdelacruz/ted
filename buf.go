@@ -38,7 +38,31 @@ func (buf *Buf) WriteLine(s string) {
 	buf.Lines = append(buf.Lines, s)
 }
 
-func (buf *Buf) InsEOL(s string, x, y int) {
+func (buf *Buf) InsEOL(x, y int) {
+	if !buf.InWriteBounds(x, y) {
+		return
+	}
+
+	nLines := len(buf.Lines)
+	if y == nLines {
+		buf.WriteLine("")
+		return
+	}
+
+	line := []rune(buf.Lines[y])
+	var leftPart, rightPart []rune
+	leftPart = line[:x]
+	if x <= len(line)-1 {
+		rightPart = line[x:]
+	}
+
+	buf.Lines = append(buf.Lines, "")
+	if y < len(buf.Lines)-2 {
+		copy(buf.Lines[y+2:], buf.Lines[y+1:])
+	}
+
+	buf.Lines[y] = string(leftPart)
+	buf.Lines[y+1] = string(rightPart)
 }
 
 func (buf *Buf) InsChar(c rune, x, y int) {

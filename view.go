@@ -69,6 +69,17 @@ func (v *View) HandleEvent(e *tb.Event) {
 			v.CurUp()
 		case tb.KeyArrowDown:
 			v.CurDown()
+		case tb.KeyCtrlA:
+			v.CurBOL()
+		case tb.KeyEnter:
+			bufPos := v.BufPos()
+			v.Buf.InsEOL(bufPos.X, bufPos.Y)
+			v.Draw()
+
+			v.CurDown()
+			v.CurBOL()
+			v.DrawCursor()
+			return
 		case tb.KeySpace:
 			c = ' '
 		case 0:
@@ -92,11 +103,13 @@ func (v *View) HandleEvent(e *tb.Event) {
 }
 
 func (v *View) InBoundsCur() bool {
-	if v.Cur.X >= 0 && v.Cur.X < v.Area.Width &&
-		v.Cur.Y >= 0 && v.Cur.Y < v.Area.Height {
-		return true
+	if v.Cur.Y < 0 || v.Cur.Y > len(v.TextBlk.Text)-1 {
+		return false
 	}
-	return false
+	if v.Cur.X < 0 || v.Cur.X > len(v.TextBlk.Text[v.Cur.Y])-1 {
+		return false
+	}
+	return true
 }
 
 // Return char under the cursor or 0 if out of bounds.
@@ -129,6 +142,10 @@ func (v *View) IsEOFCur() bool {
 		return true
 	}
 	return false
+}
+
+func (v *View) CurBOL() {
+	v.Cur.X = 0
 }
 
 func (v *View) CurLeft() {
@@ -181,7 +198,7 @@ func (v *View) CurUp() {
 	}
 }
 func (v *View) CurDown() {
-	if v.Cur.Y < v.Area.Height-1 {
+	if v.Cur.Y < len(v.TextBlk.Text)-1 {
 		v.Cur.Y++
 	}
 
