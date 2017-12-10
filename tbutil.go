@@ -59,3 +59,7 @@ func drawBox(x, y, width, height int, fg, bg tb.Attribute) {
 	print("┘", x+width-1, y+height-1, fg, bg)
 	print("└", x, y+height-1, fg, bg)
 }
+
+func runeslen(s string) int {
+	return len([]rune(s))
+}

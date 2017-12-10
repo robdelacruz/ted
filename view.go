@@ -72,12 +72,12 @@ func (v *View) HandleEvent(e *tb.Event) {
 		case tb.KeyCtrlA:
 			v.CurBOL()
 		case tb.KeyCtrlV:
-			s := "12345"
+			s := "12345\n678\n90\n"
 			bufPos := v.BufPos()
-			v.Buf.InsStr(s, bufPos.X, bufPos.Y)
+			bufPos = v.Buf.InsText(s, bufPos.X, bufPos.Y)
 			v.Draw()
 
-			v.CurRightN(len([]rune(s)))
+			v.Cur = v.BlkFromBuf[bufPos]
 			v.DrawCursor()
 			return
 		case tb.KeyEnter:
@@ -225,5 +225,10 @@ func (v *View) CurDown() {
 func (v *View) CurRightN(n int) {
 	for i := 0; i < n; i++ {
 		v.CurRight()
+	}
+}
+func (v *View) CurDownN(n int) {
+	for i := 0; i < n; i++ {
+		v.CurDown()
 	}
 }

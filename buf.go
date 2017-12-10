@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 )
 
@@ -89,16 +90,16 @@ func (buf *Buf) InsChar(c rune, x, y int) {
 	buf.Lines[y] = string(line)
 }
 
-func (buf *Buf) InsStr(s string, x, y int) {
+func (buf *Buf) InsStr(s string, x, y int) int {
 	if !buf.InWriteBounds(x, y) {
-		return
+		return x
 	}
 
 	// Insert new line with string.
 	nLines := len(buf.Lines)
 	if y == nLines {
 		buf.WriteLine(s)
-		return
+		return x
 	}
 
 	// Replace existing line, insert string.
@@ -112,4 +113,23 @@ func (buf *Buf) InsStr(s string, x, y int) {
 	b.WriteString(string(rightPart))
 
 	buf.Lines[y] = b.String()
+
+	return x + runeslen(s)
+}
+
+func (buf *Buf) InsText(s string, x, y int) (bufPos Pos) {
+	b := bytes.NewBufferString(s)
+	scanner := bufio.NewScanner(b)
+
+	xBuf, yBuf := x, y
+	for scanner.Scan() {
+		sline := scanner.Text()
+		xBuf = buf.InsStr(sline, xBuf, yBuf)
+		buf.InsEOL(xBuf, yBuf)
+
+		yBuf++
+		xBuf = 0
+	}
+
+	return Pos{xBuf, yBuf}
 }
