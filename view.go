@@ -71,6 +71,15 @@ func (v *View) HandleEvent(e *tb.Event) {
 			v.CurDown()
 		case tb.KeyCtrlA:
 			v.CurBOL()
+		case tb.KeyCtrlV:
+			s := "12345"
+			bufPos := v.BufPos()
+			v.Buf.InsStr(s, bufPos.X, bufPos.Y)
+			v.Draw()
+
+			v.CurRightN(len([]rune(s)))
+			v.DrawCursor()
+			return
 		case tb.KeyEnter:
 			bufPos := v.BufPos()
 			v.Buf.InsEOL(bufPos.X, bufPos.Y)
@@ -211,5 +220,10 @@ func (v *View) CurDown() {
 				break
 			}
 		}
+	}
+}
+func (v *View) CurRightN(n int) {
+	for i := 0; i < n; i++ {
+		v.CurRight()
 	}
 }

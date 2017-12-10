@@ -1,6 +1,8 @@
 package main
 
-import ()
+import (
+	"bytes"
+)
 
 type Buf struct {
 	Lines []string
@@ -85,4 +87,29 @@ func (buf *Buf) InsChar(c rune, x, y int) {
 	}
 	line[x] = c
 	buf.Lines[y] = string(line)
+}
+
+func (buf *Buf) InsStr(s string, x, y int) {
+	if !buf.InWriteBounds(x, y) {
+		return
+	}
+
+	// Insert new line with string.
+	nLines := len(buf.Lines)
+	if y == nLines {
+		buf.WriteLine(s)
+		return
+	}
+
+	// Replace existing line, insert string.
+	var b bytes.Buffer
+	line := []rune(buf.Lines[y])
+	leftPart := line[:x]
+	rightPart := line[x:]
+
+	b.WriteString(string(leftPart))
+	b.WriteString(s)
+	b.WriteString(string(rightPart))
+
+	buf.Lines[y] = b.String()
 }
