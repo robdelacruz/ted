@@ -32,7 +32,7 @@ func main() {
 	//	buf.WriteLine("The quick brown fox jumps over the 123")
 	//	buf.WriteLine("Last line!")
 
-	view := NewView(10, 10, 25, 15, buf)
+	view := NewView(5, 5, 40, 20, buf)
 	//view := NewView(20, 20, 40, 10, buf)
 	p := NewPanel(view.Border.X, view.Border.Y+view.Border.Height,
 		view.Border.Width, 10, "x:0 y:0")

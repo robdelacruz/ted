@@ -101,6 +101,26 @@ func (v *View) HandleEvent(e *tb.Event) {
 			v.CurBOL()
 			v.DrawCursor()
 			return
+		case tb.KeyDelete:
+			bufPos := v.BufPos()
+			v.Buf.DelChar(bufPos.X, bufPos.Y)
+
+			v.Draw()
+			v.DrawCursor()
+			return
+		case tb.KeyBackspace:
+			fallthrough
+		case tb.KeyBackspace2:
+			prevbufPos := v.BufPos()
+			v.CurLeft()
+			bufPos := v.BufPos()
+			if bufPos.X != prevbufPos.X || bufPos.Y != prevbufPos.Y {
+				v.Buf.DelChar(bufPos.X, bufPos.Y)
+
+				v.Draw()
+				v.DrawCursor()
+				return
+			}
 		case tb.KeySpace:
 			c = ' '
 		case 0:
@@ -250,6 +270,10 @@ func (v *View) CurDownN(n int) {
 	}
 }
 func (v *View) CurWordNext() {
+	if v.IsNilCur() {
+		v.CurRight()
+	}
+
 	// Skip to first space.
 	for !unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsEOFCur() {
 		v.CurRight()
@@ -261,14 +285,14 @@ func (v *View) CurWordNext() {
 	}
 }
 func (v *View) CurWordBack() {
-	v.CurLeft()
+	if v.IsNilCur() {
+		v.CurLeft()
+	}
 
-	// Skip back to first space.
 	for !unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsBOFCur() {
 		v.CurLeft()
 	}
 
-	// Skip spaces back to first letter.
 	for unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsBOFCur() {
 		v.CurLeft()
 	}

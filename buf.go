@@ -14,6 +14,22 @@ func NewBuf() *Buf {
 	return buf
 }
 
+func (buf *Buf) InBounds(x, y int) bool {
+	if y < 0 || x < 0 {
+		return false
+	}
+
+	nLines := len(buf.Lines)
+	if y > nLines-1 {
+		return false
+	}
+	line := []rune(buf.Lines[y])
+	if x > len(line)-1 {
+		return false
+	}
+	return true
+}
+
 func (buf *Buf) InWriteBounds(x, y int) bool {
 	if y < 0 || x < 0 {
 		return false
@@ -132,4 +148,24 @@ func (buf *Buf) InsText(s string, x, y int) (bufPos Pos) {
 	}
 
 	return Pos{xBuf, yBuf}
+}
+
+func (buf *Buf) DelChar(x, y int) (bufPos Pos) {
+	return buf.DelChars(x, y, 1)
+}
+
+func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
+	if !buf.InBounds(x, y) {
+		return Pos{x, y}
+	}
+	// Replace existing line, delete chars.
+	line := []rune(buf.Lines[y])
+	if x+n > len(line) {
+		n = len(line) - x
+	}
+	copy(line[x:], line[x+n:])
+	line = line[:len(line)-n]
+	buf.Lines[y] = string(line)
+
+	return Pos{x, y}
 }
