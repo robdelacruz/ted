@@ -1,6 +1,8 @@
 package main
 
 import (
+	"unicode"
+
 	tb "github.com/nsf/termbox-go"
 )
 
@@ -69,8 +71,18 @@ func (v *View) HandleEvent(e *tb.Event) {
 			v.CurUp()
 		case tb.KeyArrowDown:
 			v.CurDown()
+		case tb.KeyCtrlN:
+			fallthrough
+		case tb.KeyCtrlF:
+			v.CurWordNext()
+		case tb.KeyCtrlP:
+			fallthrough
+		case tb.KeyCtrlB:
+			v.CurWordBack()
 		case tb.KeyCtrlA:
 			v.CurBOL()
+		case tb.KeyCtrlE:
+			v.CurEOL()
 		case tb.KeyCtrlV:
 			s := "12345\n678\n90\n"
 			bufPos := v.BufPos()
@@ -156,7 +168,12 @@ func (v *View) IsEOFCur() bool {
 func (v *View) CurBOL() {
 	v.Cur.X = 0
 }
-
+func (v *View) CurEOL() {
+	for v.Cur.X < v.TextBlk.Width && !v.IsNilCur() {
+		v.Cur.X++
+	}
+	v.Cur.X--
+}
 func (v *View) CurLeft() {
 	if !v.IsBOFCur() {
 		v.Cur.X--
@@ -230,5 +247,29 @@ func (v *View) CurRightN(n int) {
 func (v *View) CurDownN(n int) {
 	for i := 0; i < n; i++ {
 		v.CurDown()
+	}
+}
+func (v *View) CurWordNext() {
+	// Skip to first space.
+	for !unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsEOFCur() {
+		v.CurRight()
+	}
+
+	// Skip spaces to first letter.
+	for unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsEOFCur() {
+		v.CurRight()
+	}
+}
+func (v *View) CurWordBack() {
+	v.CurLeft()
+
+	// Skip back to first space.
+	for !unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsBOFCur() {
+		v.CurLeft()
+	}
+
+	// Skip spaces back to first letter.
+	for unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsBOFCur() {
+		v.CurLeft()
 	}
 }

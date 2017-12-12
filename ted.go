@@ -46,7 +46,7 @@ func main() {
 	for {
 		e := tb.PollEvent()
 		if e.Type == tb.EventKey {
-			if e.Key == tb.KeyEsc {
+			if e.Key == tb.KeyCtrlQ {
 				break
 			}
 		}
