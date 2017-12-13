@@ -172,7 +172,7 @@ func (blk *TextBlk) FillWithBuf(buf *Buf) {
 	}
 
 	// Remove any extra rows leftover from previous draw.
-	blk.Resize(blk.Width, yBlk+1)
+	blk.Resize(blk.Width, yBlk)
 
 	blk.Cur = blk.BlkFromBuf[bufPos]
 }

@@ -34,16 +34,6 @@ func min(n1, n2 int) int {
 	return n2
 }
 
-func (v *View) Draw() {
-	drawBox(v.Border.X, v.Border.Y, v.Border.Width, v.Border.Height, 0, 0)
-	v.TextBlk.FillWithBuf(v.Buf)
-	v.drawText()
-}
-
-func (v *View) DrawCursor() {
-	tb.SetCursor(v.Area.X+v.Cur.X, v.Area.Y+v.Cur.Y)
-}
-
 func (v *View) drawText() {
 	text := v.TextBlk.Text
 	for y := 0; y < min(v.TextBlk.Height, v.Area.Height); y++ {
@@ -57,6 +47,21 @@ func (v *View) drawText() {
 			print(string(c), x+v.X, y+v.Y, 0, 0)
 		}
 	}
+}
+
+func (v *View) Draw() {
+	drawBox(v.Border.X, v.Border.Y, v.Border.Width, v.Border.Height, 0, 0)
+	v.TextBlk.FillWithBuf(v.Buf)
+	v.drawText()
+}
+
+func (v *View) DrawCursor() {
+	tb.SetCursor(v.Area.X+v.Cur.X, v.Area.Y+v.Cur.Y)
+}
+
+func (v *View) DrawCursorBufPos(bufPos Pos) {
+	v.Cur = v.BlkFromBuf[bufPos]
+	v.DrawCursor()
 }
 
 func (v *View) HandleEvent(e *tb.Event) {
@@ -88,25 +93,19 @@ func (v *View) HandleEvent(e *tb.Event) {
 			bufPos := v.BufPos()
 			bufPos = v.Buf.InsText(s, bufPos.X, bufPos.Y)
 			v.Draw()
-
-			v.Cur = v.BlkFromBuf[bufPos]
-			v.DrawCursor()
+			v.DrawCursorBufPos(bufPos)
 			return
 		case tb.KeyEnter:
 			bufPos := v.BufPos()
-			v.Buf.InsEOL(bufPos.X, bufPos.Y)
+			bufPos = v.Buf.InsEOL(bufPos.X, bufPos.Y)
 			v.Draw()
-
-			v.CurDown()
-			v.CurBOL()
-			v.DrawCursor()
+			v.DrawCursorBufPos(bufPos)
 			return
 		case tb.KeyDelete:
 			bufPos := v.BufPos()
 			v.Buf.DelChar(bufPos.X, bufPos.Y)
-
 			v.Draw()
-			v.DrawCursor()
+			v.DrawCursorBufPos(bufPos)
 			return
 		case tb.KeyBackspace:
 			fallthrough
@@ -116,9 +115,8 @@ func (v *View) HandleEvent(e *tb.Event) {
 			bufPos := v.BufPos()
 			if bufPos.X != prevbufPos.X || bufPos.Y != prevbufPos.Y {
 				v.Buf.DelChar(bufPos.X, bufPos.Y)
-
 				v.Draw()
-				v.DrawCursor()
+				v.DrawCursorBufPos(bufPos)
 				return
 			}
 		case tb.KeySpace:
@@ -131,11 +129,9 @@ func (v *View) HandleEvent(e *tb.Event) {
 	// Char entered
 	if c != 0 {
 		bufPos := v.BufPos()
-		v.Buf.InsChar(c, bufPos.X, bufPos.Y)
+		bufPos = v.Buf.InsChar(c, bufPos.X, bufPos.Y)
 		v.Draw()
-
-		v.CurRight()
-		v.DrawCursor()
+		v.DrawCursorBufPos(bufPos)
 		return
 	}
 
@@ -219,7 +215,7 @@ func (v *View) CurRight() {
 
 	// Past right margin, wrap to next line if there's room.
 	if v.Cur.X > v.Area.Width-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
-		if v.Cur.Y < v.TextBlk.Height-1 {
+		if v.Cur.Y < len(v.TextBlk.Text)-1 {
 			v.Cur.X = 0
 			v.Cur.Y++
 		} else {

@@ -57,15 +57,15 @@ func (buf *Buf) WriteLine(s string) {
 	buf.Lines = append(buf.Lines, s)
 }
 
-func (buf *Buf) InsEOL(x, y int) {
+func (buf *Buf) InsEOL(x, y int) (bufPos Pos) {
 	if !buf.InWriteBounds(x, y) {
-		return
+		return Pos{x, y}
 	}
 
 	nLines := len(buf.Lines)
 	if y == nLines {
 		buf.WriteLine("")
-		return
+		return Pos{x, y + 1}
 	}
 
 	line := []rune(buf.Lines[y])
@@ -82,18 +82,19 @@ func (buf *Buf) InsEOL(x, y int) {
 
 	buf.Lines[y] = string(leftPart)
 	buf.Lines[y+1] = string(rightPart)
+	return Pos{0, y + 1}
 }
 
-func (buf *Buf) InsChar(c rune, x, y int) {
+func (buf *Buf) InsChar(c rune, x, y int) (bufPos Pos) {
 	if !buf.InWriteBounds(x, y) {
-		return
+		return Pos{x, y}
 	}
 
 	// Insert new line with char.
 	nLines := len(buf.Lines)
 	if y == nLines {
 		buf.WriteLine(string(c))
-		return
+		return Pos{x, y + 1}
 	}
 
 	// Replace existing line, insert char.
@@ -104,6 +105,8 @@ func (buf *Buf) InsChar(c rune, x, y int) {
 	}
 	line[x] = c
 	buf.Lines[y] = string(line)
+
+	return Pos{x + 1, y}
 }
 
 func (buf *Buf) InsStr(s string, x, y int) int {
