@@ -26,6 +26,8 @@ func main() {
 
 	buf := NewBuf()
 	buf.WriteLine("Now is the time for all good men to come to the aid of the party.")
+	buf.WriteLine("abc")
+	buf.WriteLine("def")
 	//buf.WriteLine(" ")
 	//	buf.WriteLine("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
 	//	buf.WriteLine("")

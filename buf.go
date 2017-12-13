@@ -47,9 +47,9 @@ func (buf *Buf) InWriteBounds(x, y int) bool {
 	if y < nLines && x > len(line) {
 		return false
 	}
-	if y == nLines && x > 0 {
-		return false
-	}
+	//	if y == nLines && x > 0 {
+	//		return false
+	//	}
 	return true
 }
 
@@ -158,17 +158,60 @@ func (buf *Buf) DelChar(x, y int) (bufPos Pos) {
 }
 
 func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
-	if !buf.InBounds(x, y) {
+	//	if !buf.InBounds(x, y) {
+	if !buf.InWriteBounds(x, y) {
 		return Pos{x, y}
 	}
-	// Replace existing line, delete chars.
+
 	line := []rune(buf.Lines[y])
-	if x+n > len(line) {
-		n = len(line) - x
+	if x == len(line) || (x == 0 && len(line) == 0) {
+		buf.MergeLines(y, y+1)
+		n--
 	}
-	copy(line[x:], line[x+n:])
-	line = line[:len(line)-n]
-	buf.Lines[y] = string(line)
+
+	// Replace existing line, delete chars.
+	for n > 0 && buf.InBounds(x, y) {
+		line = []rune(buf.Lines[y])
+		nlinechars := min(n, len(line)-x)
+
+		copy(line[x:], line[x+nlinechars:])
+		line = line[:len(line)-nlinechars]
+		buf.Lines[y] = string(line)
+
+		n -= nlinechars
+		if n > 0 && (x == len(line) || len(line) == 0) {
+			buf.MergeLines(y, y+1)
+			n--
+		}
+	}
+
+	/*
+		if x+n > len(line) {
+			n = len(line) - x
+		}
+		copy(line[x:], line[x+n:])
+		line = line[:len(line)-n]
+		buf.Lines[y] = string(line)
+	*/
 
 	return Pos{x, y}
+}
+
+func (buf *Buf) DelLine(y int) {
+	if y < 0 || y > len(buf.Lines)-1 {
+		return
+	}
+
+	copy(buf.Lines[y:], buf.Lines[y+1:])
+	buf.Lines = buf.Lines[:len(buf.Lines)-1]
+}
+
+func (buf *Buf) MergeLines(y1, y2 int) {
+	if y1 < 0 || y1 > len(buf.Lines)-1 ||
+		y2 < 0 || y2 > len(buf.Lines)-1 {
+		return
+	}
+
+	buf.Lines[y1] += buf.Lines[y2]
+	buf.DelLine(y2)
 }
