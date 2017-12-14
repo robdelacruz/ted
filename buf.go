@@ -156,9 +156,7 @@ func (buf *Buf) InsText(s string, x, y int) (bufPos Pos) {
 func (buf *Buf) DelChar(x, y int) (bufPos Pos) {
 	return buf.DelChars(x, y, 1)
 }
-
 func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
-	//	if !buf.InBounds(x, y) {
 	if !buf.InWriteBounds(x, y) {
 		return Pos{x, y}
 	}
@@ -195,6 +193,24 @@ func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
 	*/
 
 	return Pos{x, y}
+}
+
+//$$ Hack until buf.PrevPos() added, which should recognize the CR
+//   as a buf position.
+func (buf *Buf) DelPrevChar(x, y int) (bufPos Pos) {
+	if !buf.InWriteBounds(x, y) {
+		return Pos{x, y}
+	}
+
+	if x == 0 && y > 0 {
+		yLineLen := len([]rune(buf.Lines[y]))
+		buf.MergeLines(y-1, y)
+
+		line := []rune(buf.Lines[y-1])
+		return Pos{len(line) - yLineLen, y - 1}
+	}
+
+	return buf.DelChar(x-1, y)
 }
 
 func (buf *Buf) DelLine(y int) {

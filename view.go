@@ -110,15 +110,11 @@ func (v *View) HandleEvent(e *tb.Event) {
 		case tb.KeyBackspace:
 			fallthrough
 		case tb.KeyBackspace2:
-			prevbufPos := v.BufPos()
-			v.CurLeft()
 			bufPos := v.BufPos()
-			if bufPos.X != prevbufPos.X || bufPos.Y != prevbufPos.Y {
-				v.Buf.DelChar(bufPos.X, bufPos.Y)
-				v.Draw()
-				v.DrawCursorBufPos(bufPos)
-				return
-			}
+			bufPos = v.Buf.DelPrevChar(bufPos.X, bufPos.Y)
+			v.Draw()
+			v.DrawCursorBufPos(bufPos)
+			return
 		case tb.KeySpace:
 			c = ' '
 		case 0:
