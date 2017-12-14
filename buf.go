@@ -53,6 +53,10 @@ func (buf *Buf) InWriteBounds(x, y int) bool {
 	return true
 }
 
+func (buf *Buf) Clear() {
+	buf.Lines = []string{}
+}
+
 func (buf *Buf) WriteLine(s string) {
 	buf.Lines = append(buf.Lines, s)
 }

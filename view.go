@@ -7,24 +7,31 @@ import (
 )
 
 type View struct {
-	Area
-	Border Area
+	Content Area
+	Outline Area
 	*Buf
 	*TextBlk
 }
 
 func NewView(x, y, w, h int, buf *Buf) *View {
-	border := NewArea(x, y, w, h)
-	area := NewArea(x+1, y+1, w-2, h-2)
-	textBlk := NewTextBlk(area.Width, 0)
+	outline := NewArea(x, y, w, h)
+	content := NewArea(x+1, y+1, w-2, h-2)
+	textBlk := NewTextBlk(content.Width, 0)
 
 	view := &View{
-		Area:    area,
-		Border:  border,
+		Content: content,
+		Outline: outline,
 		Buf:     buf,
 		TextBlk: textBlk,
 	}
 	return view
+}
+
+func (v *View) Pos() Pos {
+	return Pos{v.Outline.X, v.Outline.Y}
+}
+func (v *View) Size() Size {
+	return Size{v.Outline.Width, v.Outline.Height}
 }
 
 func min(n1, n2 int) int {
@@ -36,27 +43,27 @@ func min(n1, n2 int) int {
 
 func (v *View) drawText() {
 	text := v.TextBlk.Text
-	for y := 0; y < min(v.TextBlk.Height, v.Area.Height); y++ {
-		for x := 0; x < min(v.TextBlk.Width, v.Area.Width); x++ {
+	for y := 0; y < min(v.TextBlk.Height, v.Content.Height); y++ {
+		for x := 0; x < min(v.TextBlk.Width, v.Content.Width); x++ {
 			c := text[y][x]
 			if c == 0 {
-				print(string(" "), x+v.X, y+v.Y, 0, 0)
+				print(string(" "), x+v.Content.X, y+v.Content.Y, 0, 0)
 				continue
 			}
 
-			print(string(c), x+v.X, y+v.Y, 0, 0)
+			print(string(c), x+v.Content.X, y+v.Content.Y, 0, 0)
 		}
 	}
 }
 
 func (v *View) Draw() {
-	drawBox(v.Border.X, v.Border.Y, v.Border.Width, v.Border.Height, 0, 0)
+	drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, 0, 0)
 	v.TextBlk.FillWithBuf(v.Buf)
 	v.drawText()
 }
 
 func (v *View) DrawCursor() {
-	tb.SetCursor(v.Area.X+v.Cur.X, v.Area.Y+v.Cur.Y)
+	tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
 }
 
 func (v *View) DrawCursorBufPos(bufPos Pos) {
@@ -197,7 +204,7 @@ func (v *View) CurLeft() {
 		if v.Cur.Y > 0 {
 			v.Cur.Y--
 			// Go to rightmost char in prev row.
-			for x := v.Area.Width - 1; x >= 0; x-- {
+			for x := v.Content.Width - 1; x >= 0; x-- {
 				if v.TextBlk.Text[v.Cur.Y][x] != 0 {
 					v.Cur.X = x
 					break
@@ -210,7 +217,7 @@ func (v *View) CurRight() {
 	v.Cur.X++
 
 	// Past right margin, wrap to next line if there's room.
-	if v.Cur.X > v.Area.Width-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
+	if v.Cur.X > v.Content.Width-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
 		if v.Cur.Y < len(v.TextBlk.Text)-1 {
 			v.Cur.X = 0
 			v.Cur.Y++

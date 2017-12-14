@@ -37,12 +37,12 @@ func main() {
 	termW, termH := tb.Size()
 	view := NewView(0, 0, termW, termH-5, buf)
 
-	statusP := NewPanel(view.Border.X, view.Border.Y+view.Border.Height,
-		view.Border.Width, 5, "x:0 y:0")
+	statusP := NewPanel(view.Pos().X, view.Pos().Y+view.Size().Height, view.Size().Width, 5, true)
 
 	tb.Clear(0, 0)
 	view.Draw()
 	view.DrawCursor()
+	statusP.WriteLine("x:0 y:0")
 	statusP.Draw()
 	flush()
 
@@ -58,8 +58,10 @@ func main() {
 		view.HandleEvent(&e)
 
 		bufPos := view.BufPos()
-		statusP.Text = fmt.Sprintf("x:%d y:%d", bufPos.X, bufPos.Y)
+		statusP.Clear()
+		statusP.WriteLine(fmt.Sprintf("x:%d y:%d", bufPos.X, bufPos.Y))
 		statusP.Draw()
+
 		flush()
 	}
 
