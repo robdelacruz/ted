@@ -21,6 +21,10 @@ func NewEditView(x, y, w, h int, fOutline bool, buf *Buf) *EditView {
 		content = NewArea(x+1, y+1, w-2, h-2)
 	}
 	textBlk := NewTextBlk(content.Width, 0)
+	if buf == nil {
+		buf = NewBuf()
+		buf.WriteLine("")
+	}
 
 	v := &EditView{
 		Content:  content,
@@ -29,6 +33,7 @@ func NewEditView(x, y, w, h int, fOutline bool, buf *Buf) *EditView {
 		TextBlk:  textBlk,
 		fOutline: fOutline,
 	}
+	v.SyncText()
 	return v
 }
 
@@ -38,12 +43,21 @@ func (v *EditView) Pos() Pos {
 func (v *EditView) Size() Size {
 	return Size{v.Outline.Width, v.Outline.Height}
 }
-
+func (v *EditView) Text() string {
+	return v.Buf.Text()
+}
 func min(n1, n2 int) int {
 	if n1 < n2 {
 		return n1
 	}
 	return n2
+}
+
+func (v *EditView) Draw() {
+	if v.fOutline {
+		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, 0, 0)
+	}
+	v.drawText()
 }
 
 func (v *EditView) drawText() {
@@ -61,21 +75,15 @@ func (v *EditView) drawText() {
 	}
 }
 
-func (v *EditView) Draw() {
-	if v.fOutline {
-		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, 0, 0)
-	}
-	v.TextBlk.FillWithBuf(v.Buf)
-	v.drawText()
-}
-
 func (v *EditView) DrawCursor() {
 	tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
 }
 
-func (v *EditView) DrawCursorBufPos(bufPos Pos) {
+func (v *EditView) SyncText() {
+	v.TextBlk.FillWithBuf(v.Buf)
+}
+func (v *EditView) UpdateCursorBufPos(bufPos Pos) {
 	v.Cur = v.BlkFromBuf[bufPos]
-	v.DrawCursor()
 }
 
 func (v *EditView) HandleEvent(e *tb.Event) {
@@ -106,29 +114,25 @@ func (v *EditView) HandleEvent(e *tb.Event) {
 			s := "12345\n678\n90\n"
 			bufPos := v.BufPos()
 			bufPos = v.Buf.InsText(s, bufPos.X, bufPos.Y)
-			v.Draw()
-			v.DrawCursorBufPos(bufPos)
-			return
+			v.SyncText()
+			v.UpdateCursorBufPos(bufPos)
 		case tb.KeyEnter:
 			bufPos := v.BufPos()
 			bufPos = v.Buf.InsEOL(bufPos.X, bufPos.Y)
-			v.Draw()
-			v.DrawCursorBufPos(bufPos)
-			return
+			v.SyncText()
+			v.UpdateCursorBufPos(bufPos)
 		case tb.KeyDelete:
 			bufPos := v.BufPos()
 			v.Buf.DelChar(bufPos.X, bufPos.Y)
-			v.Draw()
-			v.DrawCursorBufPos(bufPos)
-			return
+			v.SyncText()
+			v.UpdateCursorBufPos(bufPos)
 		case tb.KeyBackspace:
 			fallthrough
 		case tb.KeyBackspace2:
 			bufPos := v.BufPos()
 			bufPos = v.Buf.DelPrevChar(bufPos.X, bufPos.Y)
-			v.Draw()
-			v.DrawCursorBufPos(bufPos)
-			return
+			v.SyncText()
+			v.UpdateCursorBufPos(bufPos)
 		case tb.KeySpace:
 			c = ' '
 		case 0:
@@ -140,13 +144,9 @@ func (v *EditView) HandleEvent(e *tb.Event) {
 	if c != 0 {
 		bufPos := v.BufPos()
 		bufPos = v.Buf.InsChar(c, bufPos.X, bufPos.Y)
-		v.Draw()
-		v.DrawCursorBufPos(bufPos)
-		return
+		v.SyncText()
+		v.UpdateCursorBufPos(bufPos)
 	}
-
-	v.Draw()
-	v.DrawCursor()
 }
 
 func (v *EditView) InBoundsCur() bool {

@@ -1,6 +1,8 @@
 package main
 
-import ()
+import (
+	tb "github.com/nsf/termbox-go"
+)
 
 // Panel prompt for text, interactive textual entry using textview.
 
@@ -21,7 +23,7 @@ func NewPrompt(prompt string, x, y, wEdit, hEdit int, fOutline bool) *Prompt {
 	promptPanel.WriteLine(prompt)
 	ppPos, ppSize := promptPanel.Pos(), promptPanel.Size()
 
-	edit := NewEditView(ppPos.X, ppPos.Y+1, wEdit, hEdit, false, NewBuf())
+	edit := NewEditView(ppPos.X, ppPos.Y+1, wEdit, hEdit, false, nil)
 	editSize := edit.Size()
 
 	outline := NewArea(ppPos.X-borderW, ppPos.Y-borderW, ppSize.Width+2*borderW, ppSize.Height+editSize.Height+2*borderW)
@@ -32,6 +34,10 @@ func NewPrompt(prompt string, x, y, wEdit, hEdit int, fOutline bool) *Prompt {
 	pr.Outline = outline
 	pr.fOutline = fOutline
 	return pr
+}
+
+func (pr *Prompt) Text() string {
+	return pr.Edit.Text()
 }
 
 func (pr *Prompt) Draw() {
@@ -45,4 +51,8 @@ func (pr *Prompt) Draw() {
 
 func (pr *Prompt) DrawCursor() {
 	pr.Edit.DrawCursor()
+}
+
+func (pr *Prompt) HandleEvent(e *tb.Event) {
+	pr.Edit.HandleEvent(e)
 }

@@ -14,6 +14,17 @@ func NewBuf() *Buf {
 	return buf
 }
 
+func (buf *Buf) Text() string {
+	var b bytes.Buffer
+	for i, l := range buf.Lines {
+		b.WriteString(l)
+		if i < len(buf.Lines)-1 {
+			b.WriteString("\n")
+		}
+	}
+	return b.String()
+}
+
 func (buf *Buf) InBounds(x, y int) bool {
 	if y < 0 || x < 0 {
 		return false
