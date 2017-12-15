@@ -98,7 +98,7 @@ func (buf *Buf) InsChar(c rune, x, y int) (bufPos Pos) {
 	nLines := len(buf.Lines)
 	if y == nLines {
 		buf.WriteLine(string(c))
-		return Pos{x, y + 1}
+		return Pos{x + 1, y}
 	}
 
 	// Replace existing line, insert char.

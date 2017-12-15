@@ -29,8 +29,8 @@ func main() {
 	buf.WriteLine("aaa")
 	buf.WriteLine("zzz")
 	buf.WriteLine(" ")
-	buf.WriteLine("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
-	buf.WriteLine("")
+	//buf.WriteLine("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerword is also here.")
+	buf.WriteLine("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerwordisalso")
 	buf.WriteLine("The quick brown fox jumps over the lazy dog.")
 	buf.WriteLine("Last line!")
 

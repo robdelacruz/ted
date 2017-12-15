@@ -217,7 +217,8 @@ func (v *View) CurRight() {
 	v.Cur.X++
 
 	// Past right margin, wrap to next line if there's room.
-	if v.Cur.X > v.Content.Width-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
+	//if v.Cur.X > v.Content.Width-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
+	if v.Cur.X > v.TextBlk.RowWidth-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
 		if v.Cur.Y < len(v.TextBlk.Text)-1 {
 			v.Cur.X = 0
 			v.Cur.Y++

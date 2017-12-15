@@ -9,7 +9,8 @@ type TextBlk struct {
 	BufFromBlk map[Pos]Pos // Buf pos corresponding to blk pos
 	BlkFromBuf map[Pos]Pos // Blk pos corresponding to buf pos
 	Size
-	Cur Pos
+	Cur      Pos
+	RowWidth int
 }
 
 func NewTextBlk(width, height int) *TextBlk {
@@ -46,14 +47,11 @@ func (blk *TextBlk) Resize(width, height int) {
 
 	blk.Height = height
 	blk.Width = width
+	blk.RowWidth = width - 1 // Leave 1 char room for CR/LF.
 }
 
 func (blk *TextBlk) AddRows(n int) {
 	blk.Resize(blk.Width, blk.Height+n)
-}
-
-func (blk *TextBlk) AddCols(n int) {
-	blk.Resize(blk.Width+n, blk.Height)
 }
 
 func (blk *TextBlk) ClearRow(yBlk, xBlkStart, yBuf, xBuf int) {
@@ -112,7 +110,7 @@ func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
 
 	for _, word := range words {
 		// Not enough space in this line to fit word, try in next line.
-		if (xBlk + len(word) - 1) > (blk.Width - 1) {
+		if (xBlk + len(word) - 1) > (blk.RowWidth - 1) {
 			blk.ClearRow(yBlk, xBlk, yBuf, xBuf)
 			yBlk++
 			xBlk = 0
@@ -135,9 +133,9 @@ func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
 			xBlk++
 			xBuf++
 
-			// If word is longer than entire textblk width,
+			// If word is longer than entire row width,
 			// split word into multiple lines.
-			if xBlk > blk.Width-1 {
+			if xBlk > blk.RowWidth-1 {
 				yBlk++
 				xBlk = 0
 
@@ -150,11 +148,6 @@ func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
 	}
 
 	blk.ClearRow(yBlk, xBlk, yBuf, xBuf)
-
-	// Last word ended exactly at txtblk edge, so already at next row.
-	if xBlk == 0 && len(words) > 0 {
-		return yBlk
-	}
 
 	return yBlk + 1
 }
