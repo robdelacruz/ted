@@ -21,6 +21,13 @@ const (
 	CmdFocus
 )
 
+type TedEvent int
+
+const (
+	TENone TedEvent = iota
+	TEExit
+)
+
 type UIState struct {
 	Focus WhichFocus
 }
@@ -83,7 +90,11 @@ func main() {
 		if uiState.Focus == EditFocus {
 			EditV.HandleEvent(&e)
 		} else if uiState.Focus == CmdFocus {
-			CmdPrompt.HandleEvent(&e)
+			tevt := CmdPrompt.HandleEvent(&e)
+			if tevt == TEExit {
+				_log.Printf("CmdPrompt: %s\n", CmdPrompt.Text())
+				uiState.Focus = EditFocus
+			}
 		}
 
 		Draw(uiState)

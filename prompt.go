@@ -53,6 +53,13 @@ func (pr *Prompt) DrawCursor() {
 	pr.Edit.DrawCursor()
 }
 
-func (pr *Prompt) HandleEvent(e *tb.Event) {
+func (pr *Prompt) HandleEvent(e *tb.Event) TedEvent {
+	if e.Type == tb.EventKey {
+		if e.Key == tb.KeyEnter {
+			return TEExit
+		}
+	}
+
 	pr.Edit.HandleEvent(e)
+	return TENone
 }
