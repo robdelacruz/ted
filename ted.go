@@ -35,15 +35,21 @@ func main() {
 	buf.WriteLine("Last line!")
 
 	termW, termH := tb.Size()
-	view := NewView(0, 0, termW, termH-5, buf)
+	view := NewEditView(0, 0, termW, termH-5, true, buf)
 
 	statusP := NewPanel(view.Pos().X, view.Pos().Y+view.Size().Height, view.Size().Width, 5, true)
+	statusPos := statusP.Pos()
 
 	tb.Clear(0, 0)
 	view.Draw()
 	view.DrawCursor()
 	statusP.WriteLine("x:0 y:0")
 	statusP.Draw()
+
+	pr := NewPrompt("Open file:", statusPos.X, statusPos.Y, termW-2, 1, true)
+	pr.Draw()
+	pr.DrawCursor()
+
 	flush()
 
 	for {

@@ -26,6 +26,13 @@ func NewPanel(x, y, w, h int, fOutline bool) *Panel {
 	return p
 }
 
+func (p *Panel) Pos() Pos {
+	return Pos{p.Outline.X, p.Outline.Y}
+}
+func (p *Panel) Size() Size {
+	return Size{p.Outline.Width, p.Outline.Height}
+}
+
 func (p *Panel) Draw() {
 	if p.fOutline {
 		drawBox(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height, 0, 0)

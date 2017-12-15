@@ -6,31 +6,36 @@ import (
 	tb "github.com/nsf/termbox-go"
 )
 
-type View struct {
+type EditView struct {
 	Content Area
 	Outline Area
 	*Buf
 	*TextBlk
+	fOutline bool
 }
 
-func NewView(x, y, w, h int, buf *Buf) *View {
+func NewEditView(x, y, w, h int, fOutline bool, buf *Buf) *EditView {
 	outline := NewArea(x, y, w, h)
-	content := NewArea(x+1, y+1, w-2, h-2)
+	content := outline
+	if fOutline {
+		content = NewArea(x+1, y+1, w-2, h-2)
+	}
 	textBlk := NewTextBlk(content.Width, 0)
 
-	view := &View{
-		Content: content,
-		Outline: outline,
-		Buf:     buf,
-		TextBlk: textBlk,
+	v := &EditView{
+		Content:  content,
+		Outline:  outline,
+		Buf:      buf,
+		TextBlk:  textBlk,
+		fOutline: fOutline,
 	}
-	return view
+	return v
 }
 
-func (v *View) Pos() Pos {
+func (v *EditView) Pos() Pos {
 	return Pos{v.Outline.X, v.Outline.Y}
 }
-func (v *View) Size() Size {
+func (v *EditView) Size() Size {
 	return Size{v.Outline.Width, v.Outline.Height}
 }
 
@@ -41,7 +46,7 @@ func min(n1, n2 int) int {
 	return n2
 }
 
-func (v *View) drawText() {
+func (v *EditView) drawText() {
 	text := v.TextBlk.Text
 	for y := 0; y < min(v.TextBlk.Height, v.Content.Height); y++ {
 		for x := 0; x < min(v.TextBlk.Width, v.Content.Width); x++ {
@@ -56,22 +61,24 @@ func (v *View) drawText() {
 	}
 }
 
-func (v *View) Draw() {
-	drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, 0, 0)
+func (v *EditView) Draw() {
+	if v.fOutline {
+		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, 0, 0)
+	}
 	v.TextBlk.FillWithBuf(v.Buf)
 	v.drawText()
 }
 
-func (v *View) DrawCursor() {
+func (v *EditView) DrawCursor() {
 	tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
 }
 
-func (v *View) DrawCursorBufPos(bufPos Pos) {
+func (v *EditView) DrawCursorBufPos(bufPos Pos) {
 	v.Cur = v.BlkFromBuf[bufPos]
 	v.DrawCursor()
 }
 
-func (v *View) HandleEvent(e *tb.Event) {
+func (v *EditView) HandleEvent(e *tb.Event) {
 	var c rune
 	if e.Type == tb.EventKey {
 		switch e.Key {
@@ -142,7 +149,7 @@ func (v *View) HandleEvent(e *tb.Event) {
 	v.DrawCursor()
 }
 
-func (v *View) InBoundsCur() bool {
+func (v *EditView) InBoundsCur() bool {
 	if v.Cur.Y < 0 || v.Cur.Y > len(v.TextBlk.Text)-1 {
 		return false
 	}
@@ -153,16 +160,16 @@ func (v *View) InBoundsCur() bool {
 }
 
 // Return char under the cursor or 0 if out of bounds.
-func (v *View) CurChar() rune {
+func (v *EditView) CurChar() rune {
 	if v.InBoundsCur() {
 		return v.TextBlk.Text[v.Cur.Y][v.Cur.X]
 	}
 	return 0
 }
-func (v *View) IsNilCur() bool {
+func (v *EditView) IsNilCur() bool {
 	return v.CurChar() == 0
 }
-func (v *View) IsNilLeftCur() bool {
+func (v *EditView) IsNilLeftCur() bool {
 	if v.Cur.X == 0 {
 		return true
 	}
@@ -171,29 +178,29 @@ func (v *View) IsNilLeftCur() bool {
 	}
 	return false
 }
-func (v *View) IsBOFCur() bool {
+func (v *EditView) IsBOFCur() bool {
 	if v.Cur.Y == 0 && v.Cur.X == 0 {
 		return true
 	}
 	return false
 }
-func (v *View) IsEOFCur() bool {
+func (v *EditView) IsEOFCur() bool {
 	if v.Cur.Y >= v.TextBlk.Height-1 && v.Cur.X >= v.TextBlk.Width-1 {
 		return true
 	}
 	return false
 }
 
-func (v *View) CurBOL() {
+func (v *EditView) CurBOL() {
 	v.Cur.X = 0
 }
-func (v *View) CurEOL() {
+func (v *EditView) CurEOL() {
 	for v.Cur.X < v.TextBlk.Width && !v.IsNilCur() {
 		v.Cur.X++
 	}
 	v.Cur.X--
 }
-func (v *View) CurLeft() {
+func (v *EditView) CurLeft() {
 	if !v.IsBOFCur() {
 		v.Cur.X--
 	}
@@ -213,7 +220,7 @@ func (v *View) CurLeft() {
 		}
 	}
 }
-func (v *View) CurRight() {
+func (v *EditView) CurRight() {
 	v.Cur.X++
 
 	// Past right margin, wrap to next line if there's room.
@@ -227,7 +234,7 @@ func (v *View) CurRight() {
 		}
 	}
 }
-func (v *View) CurUp() {
+func (v *EditView) CurUp() {
 	if v.Cur.Y > 0 {
 		v.Cur.Y--
 	}
@@ -243,7 +250,7 @@ func (v *View) CurUp() {
 		}
 	}
 }
-func (v *View) CurDown() {
+func (v *EditView) CurDown() {
 	if v.Cur.Y < len(v.TextBlk.Text)-1 {
 		v.Cur.Y++
 	}
@@ -259,17 +266,17 @@ func (v *View) CurDown() {
 		}
 	}
 }
-func (v *View) CurRightN(n int) {
+func (v *EditView) CurRightN(n int) {
 	for i := 0; i < n; i++ {
 		v.CurRight()
 	}
 }
-func (v *View) CurDownN(n int) {
+func (v *EditView) CurDownN(n int) {
 	for i := 0; i < n; i++ {
 		v.CurDown()
 	}
 }
-func (v *View) CurWordNext() {
+func (v *EditView) CurWordNext() {
 	if v.IsNilCur() {
 		v.CurRight()
 	}
@@ -284,7 +291,7 @@ func (v *View) CurWordNext() {
 		v.CurRight()
 	}
 }
-func (v *View) CurWordBack() {
+func (v *EditView) CurWordBack() {
 	if v.IsNilCur() {
 		v.CurLeft()
 	}
