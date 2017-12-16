@@ -72,6 +72,27 @@ func (buf *Buf) WriteLine(s string) {
 	buf.Lines = append(buf.Lines, s)
 }
 
+func (buf *Buf) SetText(s string) {
+	buf.Clear()
+
+	b := bytes.NewBufferString(s)
+	scanner := bufio.NewScanner(b)
+	for scanner.Scan() {
+		buf.WriteLine(scanner.Text())
+	}
+}
+
+func (buf *Buf) GetText() string {
+	var b bytes.Buffer
+
+	for _, l := range buf.Lines {
+		b.WriteString(l)
+		b.WriteString("\n")
+	}
+
+	return b.String()
+}
+
 func (buf *Buf) InsEOL(x, y int) (bufPos Pos) {
 	if !buf.InWriteBounds(x, y) {
 		return Pos{x, y}

@@ -79,11 +79,26 @@ func (v *EditView) DrawCursor() {
 	tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
 }
 
+func (v *EditView) Clear() {
+	v.Buf.Clear()
+	v.SyncText()
+	v.Cur = Pos{0, 0}
+}
 func (v *EditView) SyncText() {
 	v.TextBlk.FillWithBuf(v.Buf)
 }
 func (v *EditView) UpdateCursorBufPos(bufPos Pos) {
 	v.Cur = v.BlkFromBuf[bufPos]
+}
+
+func (v *EditView) SetText(s string) {
+	v.Buf.SetText(s)
+	v.SyncText()
+	v.Cur = Pos{0, 0}
+}
+
+func (v *EditView) GetText() string {
+	return v.Buf.GetText()
 }
 
 func (v *EditView) HandleEvent(e *tb.Event) {

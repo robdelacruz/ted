@@ -36,6 +36,16 @@ func NewPrompt(prompt string, x, y, wEdit, hEdit int, fOutline bool) *Prompt {
 	return pr
 }
 
+func (pr *Prompt) SetEdit(s string) {
+	pr.Edit.Clear()
+	pr.Edit.WriteLine(s)
+	pr.Edit.SyncText()
+}
+func (pr *Prompt) SetPrompt(prompt string) {
+	pr.PromptPanel.Clear()
+	pr.PromptPanel.WriteLine(prompt)
+}
+
 func (pr *Prompt) Text() string {
 	return pr.Edit.Text()
 }

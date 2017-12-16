@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -29,7 +30,10 @@ const (
 )
 
 type UIState struct {
-	Focus WhichFocus
+	Focus       WhichFocus
+	Prompt      string
+	HotKeyTips  string
+	CurrentFile string
 }
 
 func main() {
@@ -65,59 +69,104 @@ func main() {
 	StatusPanel = NewPanel(statusArea.X, statusArea.Y, statusArea.Width, statusArea.Height, true)
 
 	// Prompt panel
-	CmdPrompt = NewPrompt("Open file:", statusArea.X, statusArea.Y, statusArea.Width-2, 1, true)
+	CmdPrompt = NewPrompt("", statusArea.X, statusArea.Y, statusArea.Width-2, 1, true)
 
-	uiState := UIState{}
-	uiState.Focus = EditFocus
+	uis := UIState{}
+	uis.Focus = EditFocus
+	uis.HotKeyTips = "^O: Open File  ^S: Save File  ^Q: Quit"
+	uis.CurrentFile = "noname.txt"
 
-	Draw(uiState)
+	Draw(uis)
 
 	for {
 		e := tb.PollEvent()
 		if e.Type == tb.EventKey {
+			// CTRL-Q: Quit
 			if e.Key == tb.KeyCtrlQ {
 				break
 			}
+
+			// ESC:
 			if e.Key == tb.KeyEsc {
-				if uiState.Focus == EditFocus {
-					uiState.Focus = CmdFocus
+				if uis.Focus == EditFocus {
+					// ESC on editor
 				} else {
-					uiState.Focus = EditFocus
+					// ESC anywhere else, back to editor
+					uis.Focus = EditFocus
+				}
+			}
+
+			// CTRL-O: Open File prompt
+			if e.Key == tb.KeyCtrlO {
+				uis.Focus = CmdFocus
+				CmdPrompt.SetPrompt("Open file:")
+				CmdPrompt.SetEdit("")
+			}
+
+			// CTRL-S: Save File
+			if e.Key == tb.KeyCtrlS {
+				sContents := EditV.GetText()
+				err := ioutil.WriteFile(uis.CurrentFile, []byte(sContents), 0644)
+				if err != nil {
+					uis.Focus = CmdFocus
+					serr := fmt.Sprintf("Error writing file (%s), ESC to cancel.", err)
+					CmdPrompt.SetPrompt(serr)
+					CmdPrompt.SetEdit("")
+				} else {
+					uis.Focus = CmdFocus
+					CmdPrompt.SetPrompt("File saved. Hit ESC.")
+					CmdPrompt.SetEdit("")
 				}
 			}
 		}
 
-		if uiState.Focus == EditFocus {
+		if uis.Focus == EditFocus {
+			// Editor receives events.
 			EditV.HandleEvent(&e)
-		} else if uiState.Focus == CmdFocus {
+		} else if uis.Focus == CmdFocus {
+			// Prompt receives events.
 			tevt := CmdPrompt.HandleEvent(&e)
 			if tevt == TEExit {
-				_log.Printf("CmdPrompt: %s\n", CmdPrompt.Text())
-				uiState.Focus = EditFocus
+				file := CmdPrompt.Text()
+				sContents, err := ioutil.ReadFile(file)
+				if err != nil {
+					serr := fmt.Sprintf("Error opening file (%s), ESC to cancel.", err)
+					CmdPrompt.SetPrompt(serr)
+					CmdPrompt.SetEdit("")
+				} else {
+					EditV.SetText(string(sContents))
+					uis.Focus = EditFocus
+				}
 			}
 		}
 
-		Draw(uiState)
+		Draw(uis)
 	}
-
 }
 
-func Draw(uiState UIState) {
+func UpdateStatusPanel(bufPos Pos, tips string) {
+	s := fmt.Sprintf("x:%d y:%d\n%s", bufPos.X, bufPos.Y, tips)
+	StatusPanel.SetText(s)
+}
+
+func Draw(uis UIState) {
 	tb.Clear(0, 0)
 
+	// Editor is always visible.
 	EditV.Draw()
 
-	if uiState.Focus == EditFocus {
-		bufPos := EditV.BufPos()
-		StatusPanel.Clear()
-		StatusPanel.WriteLine(fmt.Sprintf("x:%d y:%d", bufPos.X, bufPos.Y))
+	if uis.Focus == EditFocus {
+		// Refresh StatusPanel.
+		UpdateStatusPanel(EditV.BufPos(), uis.HotKeyTips)
 		StatusPanel.Draw()
 
 		EditV.DrawCursor()
 	}
 
-	if uiState.Focus == CmdFocus {
+	if uis.Focus == CmdFocus {
+		// Refresh CmdPrompt.
 		CmdPrompt.Draw()
+
 		CmdPrompt.DrawCursor()
 	}
 
