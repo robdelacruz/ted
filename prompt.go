@@ -23,7 +23,7 @@ func NewPrompt(prompt string, x, y, wEdit, hEdit int, fOutline bool) *Prompt {
 	promptPanel.WriteLine(prompt)
 	ppPos, ppSize := promptPanel.Pos(), promptPanel.Size()
 
-	edit := NewEditView(ppPos.X, ppPos.Y+1, wEdit, hEdit, false, nil)
+	edit := NewEditView(ppPos.X, ppPos.Y+1, wEdit, hEdit, 0, nil)
 	editSize := edit.Size()
 
 	outline := NewArea(ppPos.X-borderW, ppPos.Y-borderW, ppSize.Width+2*borderW, ppSize.Height+editSize.Height+2*borderW)
@@ -52,7 +52,7 @@ func (pr *Prompt) Text() string {
 
 func (pr *Prompt) Draw() {
 	if pr.fOutline {
-		drawBox(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height, 0, 0)
+		drawBox(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height, BWAttr)
 	}
 
 	pr.PromptPanel.Draw()

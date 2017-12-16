@@ -13,6 +13,9 @@ type Area struct {
 	Pos
 	Size
 }
+type TermAttr struct{ Fg, Bg tb.Attribute }
+
+var BWAttr TermAttr
 
 func NewArea(x, y, w, h int) Area {
 	return Area{
@@ -33,31 +36,31 @@ func flush() {
 
 }
 
-func print(s string, x, y int, fg, bg tb.Attribute) {
+func print(s string, x, y int, attr TermAttr) {
 	for _, c := range s {
-		tb.SetCell(x, y, c, fg, bg)
+		tb.SetCell(x, y, c, attr.Fg, attr.Bg)
 		x++
 	}
 }
 
-func drawBox(x, y, width, height int, fg, bg tb.Attribute) {
-	print("┌", x, y, fg, bg)
-	print("┐", x+width-1, y, fg, bg)
+func drawBox(x, y, width, height int, attr TermAttr) {
+	print("┌", x, y, attr)
+	print("┐", x+width-1, y, attr)
 
 	hline := strings.Repeat("─", width-2)
-	print(hline, x+1, y, fg, bg)
-	print(hline, x+1, y+height-1, fg, bg)
+	print(hline, x+1, y, attr)
+	print(hline, x+1, y+height-1, attr)
 
 	vchar := "│"
 	for j := y + 1; j < y+height-1; j++ {
-		print(vchar, x, j, fg, bg)
+		print(vchar, x, j, attr)
 	}
 	for j := y + 1; j < y+height-1; j++ {
-		print(vchar, x+width-1, j, fg, bg)
+		print(vchar, x+width-1, j, attr)
 	}
 
-	print("┘", x+width-1, y+height-1, fg, bg)
-	print("└", x, y+height-1, fg, bg)
+	print("┘", x+width-1, y+height-1, attr)
+	print("└", x, y+height-1, attr)
 }
 
 func runeslen(s string) int {

@@ -61,7 +61,7 @@ func main() {
 	buf.WriteLine("Last line!")
 
 	termW, termH := tb.Size()
-	EditV = NewEditView(0, 0, termW, termH-5, true, buf)
+	EditV = NewEditView(0, 0, termW, termH-5, EditViewBorder, buf)
 
 	statusArea := NewArea(EditV.Pos().X, EditV.Pos().Y+EditV.Size().Height, EditV.Size().Width, 5)
 

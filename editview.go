@@ -11,13 +11,20 @@ type EditView struct {
 	Outline Area
 	*Buf
 	*TextBlk
-	fOutline bool
+	Mode EditViewMode
 }
 
-func NewEditView(x, y, w, h int, fOutline bool, buf *Buf) *EditView {
+type EditViewMode uint
+
+const (
+	EditViewBorder = 1 << iota
+	EditViewStatusLine
+)
+
+func NewEditView(x, y, w, h int, mode EditViewMode, buf *Buf) *EditView {
 	outline := NewArea(x, y, w, h)
 	content := outline
-	if fOutline {
+	if mode&EditViewBorder != 0 {
 		content = NewArea(x+1, y+1, w-2, h-2)
 	}
 	textBlk := NewTextBlk(content.Width, 0)
@@ -27,11 +34,11 @@ func NewEditView(x, y, w, h int, fOutline bool, buf *Buf) *EditView {
 	}
 
 	v := &EditView{
-		Content:  content,
-		Outline:  outline,
-		Buf:      buf,
-		TextBlk:  textBlk,
-		fOutline: fOutline,
+		Content: content,
+		Outline: outline,
+		Buf:     buf,
+		TextBlk: textBlk,
+		Mode:    mode,
 	}
 	v.SyncText()
 	return v
@@ -54,8 +61,8 @@ func min(n1, n2 int) int {
 }
 
 func (v *EditView) Draw() {
-	if v.fOutline {
-		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, 0, 0)
+	if v.Mode&EditViewBorder != 0 {
+		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, BWAttr)
 	}
 	v.drawText()
 }
@@ -66,11 +73,11 @@ func (v *EditView) drawText() {
 		for x := 0; x < min(v.TextBlk.Width, v.Content.Width); x++ {
 			c := text[y][x]
 			if c == 0 {
-				print(string(" "), x+v.Content.X, y+v.Content.Y, 0, 0)
+				print(string(" "), x+v.Content.X, y+v.Content.Y, BWAttr)
 				continue
 			}
 
-			print(string(c), x+v.Content.X, y+v.Content.Y, 0, 0)
+			print(string(c), x+v.Content.X, y+v.Content.Y, BWAttr)
 		}
 	}
 }

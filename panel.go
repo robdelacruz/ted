@@ -35,12 +35,12 @@ func (p *Panel) Size() Size {
 
 func (p *Panel) Draw() {
 	if p.fOutline {
-		drawBox(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height, 0, 0)
+		drawBox(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height, BWAttr)
 	}
 
 	x, y := p.Content.X, p.Content.Y
 	for i, l := range p.Lines {
-		print(l, x, y, 0, 0)
+		print(l, x, y, BWAttr)
 
 		y++
 		if i >= p.Content.Height-1 {
