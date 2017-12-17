@@ -3,14 +3,20 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
+	"fmt"
+	"io/ioutil"
 )
 
 type Buf struct {
+	Name  string
+	Dirty bool
 	Lines []string
 }
 
 func NewBuf() *Buf {
 	buf := &Buf{}
+	buf.Dirty = false
 	return buf
 }
 
@@ -93,10 +99,47 @@ func (buf *Buf) GetText() string {
 	return b.String()
 }
 
+func (buf *Buf) Load(file string) error {
+	bs, err := ioutil.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("Buf Load error (%s)", err)
+	}
+
+	buf.ClearDirty()
+	buf.Name = file
+	buf.SetText(string(bs))
+	return nil
+}
+
+// Writes contents to filename as indicated in buf.Name.
+func (buf *Buf) Save() error {
+	if buf.Name == "" {
+		return errors.New("Buf Save error (no filename given in Buf.Name)")
+	}
+
+	bs := []byte(buf.GetText())
+	err := ioutil.WriteFile(buf.Name, bs, 0644)
+	if err != nil {
+		return fmt.Errorf("Buf Save error (%s)", err)
+	}
+
+	buf.ClearDirty()
+	return nil
+}
+
+func (buf *Buf) SetDirty() {
+	buf.Dirty = true
+}
+func (buf *Buf) ClearDirty() {
+	buf.Dirty = false
+}
+
 func (buf *Buf) InsEOL(x, y int) (bufPos Pos) {
 	if !buf.InWriteBounds(x, y) {
 		return Pos{x, y}
 	}
+
+	buf.SetDirty()
 
 	nLines := len(buf.Lines)
 	if y == nLines {
@@ -126,6 +169,8 @@ func (buf *Buf) InsChar(c rune, x, y int) (bufPos Pos) {
 		return Pos{x, y}
 	}
 
+	buf.SetDirty()
+
 	// Insert new line with char.
 	nLines := len(buf.Lines)
 	if y == nLines {
@@ -149,6 +194,8 @@ func (buf *Buf) InsStr(s string, x, y int) int {
 	if !buf.InWriteBounds(x, y) {
 		return x
 	}
+
+	buf.SetDirty()
 
 	// Insert new line with string.
 	nLines := len(buf.Lines)
@@ -186,6 +233,8 @@ func (buf *Buf) InsText(s string, x, y int) (bufPos Pos) {
 		xBuf = 0
 	}
 
+	buf.SetDirty()
+
 	return Pos{xBuf, yBuf}
 }
 
@@ -196,6 +245,8 @@ func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
 	if !buf.InWriteBounds(x, y) {
 		return Pos{x, y}
 	}
+
+	buf.SetDirty()
 
 	line := []rune(buf.Lines[y])
 	if x == len(line) || (x == 0 && len(line) == 0) {
@@ -219,15 +270,6 @@ func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
 		}
 	}
 
-	/*
-		if x+n > len(line) {
-			n = len(line) - x
-		}
-		copy(line[x:], line[x+n:])
-		line = line[:len(line)-n]
-		buf.Lines[y] = string(line)
-	*/
-
 	return Pos{x, y}
 }
 
@@ -237,6 +279,8 @@ func (buf *Buf) DelPrevChar(x, y int) (bufPos Pos) {
 	if !buf.InWriteBounds(x, y) {
 		return Pos{x, y}
 	}
+
+	buf.SetDirty()
 
 	if x == 0 && y > 0 {
 		yLineLen := len([]rune(buf.Lines[y]))
@@ -254,6 +298,8 @@ func (buf *Buf) DelLine(y int) {
 		return
 	}
 
+	buf.SetDirty()
+
 	copy(buf.Lines[y:], buf.Lines[y+1:])
 	buf.Lines = buf.Lines[:len(buf.Lines)-1]
 }
@@ -263,6 +309,8 @@ func (buf *Buf) MergeLines(y1, y2 int) {
 		y2 < 0 || y2 > len(buf.Lines)-1 {
 		return
 	}
+
+	buf.SetDirty()
 
 	buf.Lines[y1] += buf.Lines[y2]
 	buf.DelLine(y2)

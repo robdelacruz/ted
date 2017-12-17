@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"strings"
 	"unicode"
 
 	tb "github.com/nsf/termbox-go"
@@ -11,7 +13,9 @@ type EditView struct {
 	Outline Area
 	*Buf
 	*TextBlk
-	Mode EditViewMode
+	Mode        EditViewMode
+	ContentAttr TermAttr
+	StatusAttr  TermAttr
 }
 
 type EditViewMode uint
@@ -21,11 +25,14 @@ const (
 	EditViewStatusLine
 )
 
-func NewEditView(x, y, w, h int, mode EditViewMode, buf *Buf) *EditView {
+func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr TermAttr, buf *Buf) *EditView {
 	outline := NewArea(x, y, w, h)
 	content := outline
 	if mode&EditViewBorder != 0 {
 		content = NewArea(x+1, y+1, w-2, h-2)
+	}
+	if mode&EditViewStatusLine != 0 {
+		content.Height--
 	}
 	textBlk := NewTextBlk(content.Width, 0)
 	if buf == nil {
@@ -33,13 +40,15 @@ func NewEditView(x, y, w, h int, mode EditViewMode, buf *Buf) *EditView {
 		buf.WriteLine("")
 	}
 
-	v := &EditView{
-		Content: content,
-		Outline: outline,
-		Buf:     buf,
-		TextBlk: textBlk,
-		Mode:    mode,
-	}
+	v := &EditView{}
+	v.Content = content
+	v.Outline = outline
+	v.Mode = mode
+	v.ContentAttr = contentAttr
+	v.StatusAttr = statusAttr
+	v.Buf = buf
+	v.TextBlk = textBlk
+
 	v.SyncText()
 	return v
 }
@@ -62,9 +71,14 @@ func min(n1, n2 int) int {
 
 func (v *EditView) Draw() {
 	if v.Mode&EditViewBorder != 0 {
-		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, BWAttr)
+		boxAttr := v.ContentAttr
+		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, boxAttr)
 	}
 	v.drawText()
+
+	if v.Mode&EditViewStatusLine != 0 {
+		v.drawStatus()
+	}
 }
 
 func (v *EditView) drawText() {
@@ -73,13 +87,43 @@ func (v *EditView) drawText() {
 		for x := 0; x < min(v.TextBlk.Width, v.Content.Width); x++ {
 			c := text[y][x]
 			if c == 0 {
-				print(string(" "), x+v.Content.X, y+v.Content.Y, BWAttr)
-				continue
+				c = ' '
 			}
-
-			print(string(c), x+v.Content.X, y+v.Content.Y, BWAttr)
+			print(string(c), x+v.Content.X, y+v.Content.Y, v.ContentAttr)
 		}
 	}
+
+	// Paint the rest of the content area.
+	s := strings.Repeat(" ", v.Content.Width)
+	for y := v.TextBlk.Height; y < v.Content.Height; y++ {
+		print(s, v.Content.X, y+v.Content.Y, v.ContentAttr)
+	}
+}
+
+// Draw status line one row below content area.
+func (v *EditView) drawStatus() {
+	left := v.Content.X
+	width := v.Content.Width
+	y := v.Content.Y + v.Content.Height
+
+	// Clear status line first
+	clearStr := strings.Repeat(" ", width)
+	print(clearStr, left, y, v.StatusAttr)
+
+	// Buf name
+	bufName := v.Buf.Name
+	if bufName == "" {
+		bufName = "(new)"
+	}
+	if v.Buf.Dirty {
+		bufName += " [+]"
+	}
+	print(bufName, left, y, v.StatusAttr)
+
+	// Buf pos (x,y)
+	bufPos := v.BufPos()
+	sBufPos := fmt.Sprintf("%d,%d", bufPos.Y+1, bufPos.X+1)
+	print(sBufPos, left+width-(width/3), y, v.StatusAttr)
 }
 
 func (v *EditView) DrawCursor() {

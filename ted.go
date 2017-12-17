@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -61,7 +60,10 @@ func main() {
 	buf.WriteLine("Last line!")
 
 	termW, termH := tb.Size()
-	EditV = NewEditView(0, 0, termW, termH-5, EditViewBorder, buf)
+
+	editAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
+	statusAttr := TermAttr{tb.ColorBlack, tb.ColorWhite}
+	EditV = NewEditView(0, 0, termW, termH-5, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, buf)
 
 	statusArea := NewArea(EditV.Pos().X, EditV.Pos().Y+EditV.Size().Height, EditV.Size().Width, 5)
 
@@ -105,8 +107,7 @@ func main() {
 
 			// CTRL-S: Save File
 			if e.Key == tb.KeyCtrlS {
-				sContents := EditV.GetText()
-				err := ioutil.WriteFile(uis.CurrentFile, []byte(sContents), 0644)
+				err := EditV.Buf.Save()
 				if err != nil {
 					uis.Focus = CmdFocus
 					serr := fmt.Sprintf("Error writing file (%s), ESC to cancel.", err)
@@ -128,13 +129,13 @@ func main() {
 			tevt := CmdPrompt.HandleEvent(&e)
 			if tevt == TEExit {
 				file := CmdPrompt.Text()
-				sContents, err := ioutil.ReadFile(file)
+				err := EditV.Buf.Load(file)
 				if err != nil {
 					serr := fmt.Sprintf("Error opening file (%s), ESC to cancel.", err)
 					CmdPrompt.SetPrompt(serr)
 					CmdPrompt.SetEdit("")
 				} else {
-					EditV.SetText(string(sContents))
+					EditV.SetText(EditV.Buf.GetText())
 					uis.Focus = EditFocus
 				}
 			}
