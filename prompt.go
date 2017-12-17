@@ -10,29 +10,34 @@ type Prompt struct {
 	PromptPanel *Panel
 	Edit        *EditView
 
-	Outline  Area
-	fOutline bool
+	Outline Area
+	Mode    PromptMode
 }
 
-func NewPrompt(prompt string, x, y, wEdit, hEdit int, fOutline bool) *Prompt {
+type PromptMode uint
+
+const (
+	PromptBorder PromptMode = 1 << iota
+)
+
+func NewPrompt(x, y, wEdit, hEdit int, mode PromptMode, prompt string, qAttr, ansAttr TermAttr) *Prompt {
 	var borderW int
-	if fOutline {
+	if mode&PromptBorder != 0 {
 		borderW = 1
 	}
-	promptPanel := NewPanel(x+borderW, y+borderW, wEdit, 1, false)
-	promptPanel.WriteLine(prompt)
+	promptPanel := NewPanel(x+borderW, y+borderW, wEdit, 1, 0, qAttr, prompt)
 	ppPos, ppSize := promptPanel.Pos(), promptPanel.Size()
 
-	edit := NewEditView(ppPos.X, ppPos.Y+1, wEdit, hEdit, 0, BWAttr, BWAttr, nil)
+	edit := NewEditView(ppPos.X, ppPos.Y+1, wEdit, hEdit, 0, ansAttr, BWAttr, nil)
 	editSize := edit.Size()
 
 	outline := NewArea(ppPos.X-borderW, ppPos.Y-borderW, ppSize.Width+2*borderW, ppSize.Height+editSize.Height+2*borderW)
 
 	pr := &Prompt{}
+	pr.Outline = outline
 	pr.PromptPanel = promptPanel
 	pr.Edit = edit
-	pr.Outline = outline
-	pr.fOutline = fOutline
+	pr.Mode = mode
 	return pr
 }
 
@@ -42,8 +47,7 @@ func (pr *Prompt) SetEdit(s string) {
 	pr.Edit.SyncText()
 }
 func (pr *Prompt) SetPrompt(prompt string) {
-	pr.PromptPanel.Clear()
-	pr.PromptPanel.WriteLine(prompt)
+	pr.PromptPanel.SetText(prompt)
 }
 
 func (pr *Prompt) Text() string {
@@ -51,7 +55,7 @@ func (pr *Prompt) Text() string {
 }
 
 func (pr *Prompt) Draw() {
-	if pr.fOutline {
+	if pr.Mode&PromptBorder != 0 {
 		drawBox(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height, BWAttr)
 	}
 
@@ -72,4 +76,14 @@ func (pr *Prompt) HandleEvent(e *tb.Event) TedEvent {
 
 	pr.Edit.HandleEvent(e)
 	return TENone
+}
+
+func (pr *Prompt) Pos() Pos {
+	return Pos{pr.Outline.X, pr.Outline.Y}
+}
+func (pr *Prompt) Size() Size {
+	return Size{pr.Outline.Width, pr.Outline.Height}
+}
+func (pr *Prompt) Area() Area {
+	return NewArea(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height)
 }

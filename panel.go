@@ -6,22 +6,35 @@ type Panel struct {
 	Content Area
 	Outline Area
 	*Buf
-	fOutline bool
+	*TextBlk
+	Mode        PanelMode
+	ContentAttr TermAttr
 }
 
-func NewPanel(x, y, w, h int, fOutline bool) *Panel {
-	outline := NewArea(x, y, w, h)
-	content := NewArea(x+1, y+1, w-2, h-2)
+type PanelMode uint
 
-	if !fOutline {
-		content = outline
+const (
+	PanelBorder PanelMode = 1 << iota
+)
+
+func NewPanel(x, y, w, h int, mode PanelMode, contentAttr TermAttr, text string) *Panel {
+	outline := NewArea(x, y, w, h)
+	content := outline
+
+	if mode&PanelBorder != 0 {
+		content = NewArea(x+1, y+1, w-2, h-2)
 	}
 
 	p := &Panel{}
 	p.Outline = outline
 	p.Content = content
 	p.Buf = NewBuf()
-	p.fOutline = fOutline
+	p.TextBlk = NewTextBlk(content.Width, 0)
+	p.Mode = mode
+	p.ContentAttr = contentAttr
+
+	p.Buf.SetText(text)
+	p.SyncText()
 
 	return p
 }
@@ -34,17 +47,20 @@ func (p *Panel) Size() Size {
 }
 
 func (p *Panel) Draw() {
-	if p.fOutline {
-		drawBox(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height, BWAttr)
+	if p.Mode&PanelBorder != 0 {
+		drawBox(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height, p.ContentAttr)
 	}
 
-	x, y := p.Content.X, p.Content.Y
-	for i, l := range p.Lines {
-		print(l, x, y, BWAttr)
+	p.drawText()
+}
+func (p *Panel) drawText() {
+	p.TextBlk.PrintToArea(p.Content, p.ContentAttr)
+}
 
-		y++
-		if i >= p.Content.Height-1 {
-			break
-		}
-	}
+func (p *Panel) SetText(s string) {
+	p.Buf.SetText(s)
+	p.SyncText()
+}
+func (p *Panel) SyncText() {
+	p.TextBlk.FillWithBuf(p.Buf)
 }

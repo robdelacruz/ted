@@ -10,9 +10,9 @@ import (
 
 var _log *log.Logger
 
-var StatusPanel *Panel
 var CmdPrompt *Prompt
 var EditV *EditView
+var SplashPanel *Panel
 
 type WhichFocus int
 
@@ -63,15 +63,19 @@ func main() {
 
 	editAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	statusAttr := TermAttr{tb.ColorBlack, tb.ColorWhite}
-	EditV = NewEditView(0, 0, termW, termH-5, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, buf)
-
-	statusArea := NewArea(EditV.Pos().X, EditV.Pos().Y+EditV.Size().Height, EditV.Size().Width, 5)
-
-	// Status panel
-	StatusPanel = NewPanel(statusArea.X, statusArea.Y, statusArea.Width, statusArea.Height, true)
+	EditV = NewEditView(0, 0, termW, termH, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, buf)
 
 	// Prompt panel
-	CmdPrompt = NewPrompt("", statusArea.X, statusArea.Y, statusArea.Width-2, 1, true)
+	qAttr := TermAttr{tb.ColorBlack, tb.ColorYellow}
+	ansAttr := TermAttr{tb.ColorGreen, tb.ColorYellow}
+	CmdPrompt = NewPrompt(0, termH-5, termW, 5, 0, "", qAttr, ansAttr)
+
+	// Splash panel
+	sSplash := `Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. 
+
+Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog.`
+
+	SplashPanel = NewPanel(10, 15, 55, 18, PanelBorder, TermAttr{tb.ColorRed, tb.ColorWhite}, sSplash)
 
 	uis := UIState{}
 	uis.Focus = EditFocus
@@ -95,6 +99,8 @@ func main() {
 				} else {
 					// ESC anywhere else, back to editor
 					uis.Focus = EditFocus
+
+					fullSizeEditV()
 				}
 			}
 
@@ -103,6 +109,8 @@ func main() {
 				uis.Focus = CmdFocus
 				CmdPrompt.SetPrompt("Open file:")
 				CmdPrompt.SetEdit("")
+
+				minSizeEditV()
 			}
 
 			// CTRL-S: Save File
@@ -135,8 +143,11 @@ func main() {
 					CmdPrompt.SetPrompt(serr)
 					CmdPrompt.SetEdit("")
 				} else {
-					EditV.SetText(EditV.Buf.GetText())
+					EditV.SyncText()
+					EditV.Cur = Pos{0, 0}
 					uis.Focus = EditFocus
+
+					fullSizeEditV()
 				}
 			}
 		}
@@ -145,9 +156,16 @@ func main() {
 	}
 }
 
-func UpdateStatusPanel(bufPos Pos, tips string) {
-	s := fmt.Sprintf("x:%d y:%d\n%s", bufPos.X, bufPos.Y, tips)
-	StatusPanel.SetText(s)
+func fullSizeEditV() {
+	editBox := EditV.Area()
+	cmdBox := CmdPrompt.Area()
+	EditV.Resize(editBox.X, editBox.Y, editBox.Width, editBox.Height+cmdBox.Height-1)
+}
+
+func minSizeEditV() {
+	editBox := EditV.Area()
+	cmdBox := CmdPrompt.Area()
+	EditV.Resize(editBox.X, editBox.Y, editBox.Width, editBox.Height-cmdBox.Height+1)
 }
 
 func Draw(uis UIState) {
@@ -157,18 +175,15 @@ func Draw(uis UIState) {
 	EditV.Draw()
 
 	if uis.Focus == EditFocus {
-		// Refresh StatusPanel.
-		UpdateStatusPanel(EditV.BufPos(), uis.HotKeyTips)
-		StatusPanel.Draw()
-
 		EditV.DrawCursor()
 	}
 
 	if uis.Focus == CmdFocus {
 		// Refresh CmdPrompt.
 		CmdPrompt.Draw()
-
 		CmdPrompt.DrawCursor()
+
+		SplashPanel.Draw()
 	}
 
 	flush()

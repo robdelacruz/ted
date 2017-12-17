@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"unicode"
 )
 
@@ -175,4 +176,26 @@ func (blk *TextBlk) BlkPos() Pos {
 }
 func (blk *TextBlk) BufPos() Pos {
 	return blk.BufFromBlk[Pos{blk.Cur.X, blk.Cur.Y}]
+}
+
+// Print textblk contents to a rectangular area.
+// Textblk contents that don't fit are cropped out.
+// Empty space is painted to the background color (attribute).
+func (blk *TextBlk) PrintToArea(content Area, contentAttr TermAttr) {
+	text := blk.Text
+	for y := 0; y < min(blk.Height, content.Height); y++ {
+		for x := 0; x < min(blk.Width, content.Width); x++ {
+			c := text[y][x]
+			if c == 0 {
+				c = ' '
+			}
+			print(string(c), x+content.X, y+content.Y, contentAttr)
+		}
+	}
+
+	// Paint the rest of the content area.
+	s := strings.Repeat(" ", content.Width)
+	for y := blk.Height; y < content.Height; y++ {
+		print(s, content.X, y+content.Y, contentAttr)
+	}
 }

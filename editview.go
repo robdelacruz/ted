@@ -26,14 +26,7 @@ const (
 )
 
 func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr TermAttr, buf *Buf) *EditView {
-	outline := NewArea(x, y, w, h)
-	content := outline
-	if mode&EditViewBorder != 0 {
-		content = NewArea(x+1, y+1, w-2, h-2)
-	}
-	if mode&EditViewStatusLine != 0 {
-		content.Height--
-	}
+	outline, content := getAreas(x, y, w, h, mode)
 	textBlk := NewTextBlk(content.Width, 0)
 	if buf == nil {
 		buf = NewBuf()
@@ -53,11 +46,36 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 	return v
 }
 
+func getAreas(x, y, w, h int, mode EditViewMode) (outline, content Area) {
+	outline = NewArea(x, y, w, h)
+	content = outline
+	if mode&EditViewBorder != 0 {
+		content = NewArea(x+1, y+1, w-2, h-2)
+	}
+	if mode&EditViewStatusLine != 0 {
+		content.Height--
+	}
+
+	return outline, content
+}
+
+func (v *EditView) Resize(x, y, w, h int) {
+	outline, content := getAreas(x, y, w, h, v.Mode)
+	v.Content = content
+	v.Outline = outline
+
+	v.TextBlk.Resize(content.Width, content.Height)
+	v.SyncText()
+}
+
 func (v *EditView) Pos() Pos {
 	return Pos{v.Outline.X, v.Outline.Y}
 }
 func (v *EditView) Size() Size {
 	return Size{v.Outline.Width, v.Outline.Height}
+}
+func (v *EditView) Area() Area {
+	return NewArea(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height)
 }
 func (v *EditView) Text() string {
 	return v.Buf.Text()
@@ -82,22 +100,7 @@ func (v *EditView) Draw() {
 }
 
 func (v *EditView) drawText() {
-	text := v.TextBlk.Text
-	for y := 0; y < min(v.TextBlk.Height, v.Content.Height); y++ {
-		for x := 0; x < min(v.TextBlk.Width, v.Content.Width); x++ {
-			c := text[y][x]
-			if c == 0 {
-				c = ' '
-			}
-			print(string(c), x+v.Content.X, y+v.Content.Y, v.ContentAttr)
-		}
-	}
-
-	// Paint the rest of the content area.
-	s := strings.Repeat(" ", v.Content.Width)
-	for y := v.TextBlk.Height; y < v.Content.Height; y++ {
-		print(s, v.Content.X, y+v.Content.Y, v.ContentAttr)
-	}
+	v.TextBlk.PrintToArea(v.Content, v.ContentAttr)
 }
 
 // Draw status line one row below content area.
