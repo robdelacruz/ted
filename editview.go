@@ -130,7 +130,11 @@ func (v *EditView) drawStatus() {
 }
 
 func (v *EditView) DrawCursor() {
-	tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
+	//tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
+
+	x := v.Cur.X
+	y := v.Cur.Y - v.TextBlk.BlkYOffset
+	tb.SetCursor(v.Content.X+x, v.Content.Y+y)
 }
 
 func (v *EditView) Clear() {
@@ -161,12 +165,16 @@ func (v *EditView) HandleEvent(e *tb.Event) {
 		switch e.Key {
 		case tb.KeyArrowLeft:
 			v.CurLeft()
+			v.SyncText()
 		case tb.KeyArrowRight:
 			v.CurRight()
+			v.SyncText()
 		case tb.KeyArrowUp:
 			v.CurUp()
+			v.SyncText()
 		case tb.KeyArrowDown:
 			v.CurDown()
+			v.SyncText()
 		case tb.KeyCtrlN:
 			fallthrough
 		case tb.KeyCtrlF:
@@ -179,6 +187,20 @@ func (v *EditView) HandleEvent(e *tb.Event) {
 			v.CurBOL()
 		case tb.KeyCtrlE:
 			v.CurEOL()
+		case tb.KeyCtrlU:
+			v.TextBlk.BlkYOffset -= v.Content.Height / 2
+			if v.TextBlk.BlkYOffset < 0 {
+				v.TextBlk.BlkYOffset = 0
+			}
+			v.Cur.Y -= v.Content.Height / 2
+			v.KeepBoundsCur()
+		case tb.KeyCtrlD:
+			v.TextBlk.BlkYOffset += v.Content.Height / 2
+			if v.TextBlk.BlkYOffset > len(v.TextBlk.Text)-1 {
+				v.TextBlk.BlkYOffset = len(v.TextBlk.Text) - 1
+			}
+			v.Cur.Y += v.Content.Height / 2
+			v.KeepBoundsCur()
 		case tb.KeyCtrlV:
 			s := "12345\n678\n90\n"
 			bufPos := v.BufPos()
@@ -228,6 +250,22 @@ func (v *EditView) InBoundsCur() bool {
 	return true
 }
 
+// Move cursor back in bounds if it's outside.
+func (v *EditView) KeepBoundsCur() {
+	if v.Cur.Y < 0 {
+		v.Cur.Y = 0
+	}
+	if v.Cur.X < 0 {
+		v.Cur.X = 0
+	}
+	if v.Cur.X > v.TextBlk.Width-1 {
+		v.Cur.X = v.TextBlk.Width - 1
+	}
+	if v.Cur.Y > v.TextBlk.Height-1 {
+		v.Cur.Y = v.TextBlk.Height - 1
+	}
+}
+
 // Return char under the cursor or 0 if out of bounds.
 func (v *EditView) CurChar() rune {
 	if v.InBoundsCur() {
@@ -260,6 +298,15 @@ func (v *EditView) IsEOFCur() bool {
 	return false
 }
 
+func (v *EditView) AdjustScrollOffset() {
+	if v.Cur.Y-v.TextBlk.BlkYOffset < 0 {
+		v.TextBlk.BlkYOffset--
+	}
+	if v.Cur.Y-v.TextBlk.BlkYOffset > v.Content.Height-1 {
+		v.TextBlk.BlkYOffset++
+	}
+}
+
 func (v *EditView) CurBOL() {
 	v.Cur.X = 0
 }
@@ -288,6 +335,8 @@ func (v *EditView) CurLeft() {
 			}
 		}
 	}
+
+	v.AdjustScrollOffset()
 }
 func (v *EditView) CurRight() {
 	v.Cur.X++
@@ -302,6 +351,8 @@ func (v *EditView) CurRight() {
 			v.Cur.X--
 		}
 	}
+
+	v.AdjustScrollOffset()
 }
 func (v *EditView) CurUp() {
 	if v.Cur.Y > 0 {
@@ -318,6 +369,8 @@ func (v *EditView) CurUp() {
 			}
 		}
 	}
+
+	v.AdjustScrollOffset()
 }
 func (v *EditView) CurDown() {
 	if v.Cur.Y < len(v.TextBlk.Text)-1 {
@@ -334,16 +387,22 @@ func (v *EditView) CurDown() {
 			}
 		}
 	}
+
+	v.AdjustScrollOffset()
 }
 func (v *EditView) CurRightN(n int) {
 	for i := 0; i < n; i++ {
 		v.CurRight()
 	}
+
+	v.AdjustScrollOffset()
 }
 func (v *EditView) CurDownN(n int) {
 	for i := 0; i < n; i++ {
 		v.CurDown()
 	}
+
+	v.AdjustScrollOffset()
 }
 func (v *EditView) CurWordNext() {
 	if v.IsNilCur() {
@@ -359,6 +418,8 @@ func (v *EditView) CurWordNext() {
 	for unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsEOFCur() {
 		v.CurRight()
 	}
+
+	v.AdjustScrollOffset()
 }
 func (v *EditView) CurWordBack() {
 	if v.IsNilCur() {
@@ -372,4 +433,6 @@ func (v *EditView) CurWordBack() {
 	for unicode.IsSpace(v.CurChar()) && !v.IsNilCur() && !v.IsBOFCur() {
 		v.CurLeft()
 	}
+
+	v.AdjustScrollOffset()
 }

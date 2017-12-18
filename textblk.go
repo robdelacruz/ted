@@ -6,12 +6,13 @@ import (
 )
 
 type TextBlk struct {
-	Text       [][]rune    // A block of text, with line wrapping
+	Text       [][]rune // A block of text, with line wrapping
+	RowWidth   int
 	BufFromBlk map[Pos]Pos // Buf pos corresponding to blk pos
 	BlkFromBuf map[Pos]Pos // Blk pos corresponding to buf pos
 	Size
-	Cur      Pos
-	RowWidth int
+	Cur        Pos
+	BlkYOffset int
 }
 
 func NewTextBlk(width, height int) *TextBlk {
@@ -66,6 +67,15 @@ func (blk *TextBlk) ClearRow(yBlk, xBlkStart, yBuf, xBuf int) {
 	}
 }
 
+// Tab chars '\t' are expanded into n spaces
+func expandWhitespaceChar(c rune) string {
+	if c == '\t' {
+		//$$ Hardcode expand to 4 for now.
+		return strings.Repeat(" ", 4)
+	}
+	return string(c)
+}
+
 // Parse line to get sequence of words.
 // Each whitespace char is considered a single word.
 // Ex. "One two  three" => ["One", " ", "two", " ", " ", "three"]
@@ -79,7 +89,7 @@ func parseWords(s string) []string {
 			words = append(words, currentWord)
 
 			// Add single space word
-			words = append(words, string(c))
+			words = append(words, expandWhitespaceChar(c))
 
 			currentWord = ""
 			continue
@@ -183,19 +193,27 @@ func (blk *TextBlk) BufPos() Pos {
 // Empty space is painted to the background color (attribute).
 func (blk *TextBlk) PrintToArea(content Area, contentAttr TermAttr) {
 	text := blk.Text
-	for y := 0; y < min(blk.Height, content.Height); y++ {
-		for x := 0; x < min(blk.Width, content.Width); x++ {
-			c := text[y][x]
+	yBlk := blk.BlkYOffset
+	yBlkEdge := min(blk.Height, yBlk+content.Height)
+	y := 0
+
+	for yBlk < yBlkEdge {
+		for xBlk := 0; xBlk < min(blk.Width, content.Width); xBlk++ {
+			c := text[yBlk][xBlk]
 			if c == 0 {
 				c = ' '
 			}
-			print(string(c), x+content.X, y+content.Y, contentAttr)
+			print(string(c), xBlk+content.X, y+content.Y, contentAttr)
 		}
+
+		yBlk++
+		y++
 	}
 
 	// Paint the rest of the content area.
 	s := strings.Repeat(" ", content.Width)
-	for y := blk.Height; y < content.Height; y++ {
+	for y < content.Height {
 		print(s, content.X, y+content.Y, contentAttr)
+		y++
 	}
 }
