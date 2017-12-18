@@ -1,6 +1,8 @@
 package main
 
-import ()
+import (
+	tb "github.com/nsf/termbox-go"
+)
 
 type Panel struct {
 	Content Area
@@ -45,6 +47,9 @@ func (p *Panel) Pos() Pos {
 func (p *Panel) Size() Size {
 	return Size{p.Outline.Width, p.Outline.Height}
 }
+func (p *Panel) Area() Area {
+	return NewArea(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height)
+}
 
 func (p *Panel) Draw() {
 	if p.Mode&PanelBorder != 0 {
@@ -61,6 +66,13 @@ func (p *Panel) SetText(s string) {
 	p.Buf.SetText(s)
 	p.SyncText()
 }
+func (p *Panel) GetText() string {
+	return p.Buf.GetText()
+}
 func (p *Panel) SyncText() {
 	p.TextBlk.FillWithBuf(p.Buf)
+}
+
+func (p *Panel) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
+	return p, WidgetEventNone
 }

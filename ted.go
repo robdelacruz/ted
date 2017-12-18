@@ -4,36 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	tb "github.com/nsf/termbox-go"
 )
 
 var _log *log.Logger
-
-var CmdPrompt *Prompt
-var EditV *EditView
-var SplashPanel *Panel
-
-type WhichFocus int
-
-const (
-	EditFocus WhichFocus = iota
-	CmdFocus
-)
-
-type TedEvent int
-
-const (
-	TENone TedEvent = iota
-	TEExit
-)
-
-type UIState struct {
-	Focus       WhichFocus
-	Prompt      string
-	HotKeyTips  string
-	CurrentFile string
-}
 
 func main() {
 	flog, err := os.Create("./log.txt")
@@ -49,40 +25,46 @@ func main() {
 	}
 	defer tb.Close()
 
-	// Main text edit view
-	buf := NewBuf()
-	buf.WriteLine("Now is the time for all good men to come to the aid of the party.")
-	buf.WriteLine("aaa")
-	buf.WriteLine("zzz")
-	buf.WriteLine(" ")
-	buf.WriteLine("Word1 a the at supercalifragilisticexpialidocious, and a somewhatlongerwordisalso")
-	buf.WriteLine("The quick brown fox jumps over the lazy dog.")
-	buf.WriteLine("Last line!")
-
 	termW, termH := tb.Size()
 
+	// Main text edit view
+	editBuf := NewBuf()
+	editBuf.SetText(`
+
+
+
+ted - A terminal text editor
+
+`)
 	editAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	statusAttr := TermAttr{tb.ColorBlack, tb.ColorWhite}
-	EditV = NewEditView(0, 0, termW, termH, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, buf)
+	editW := NewEditView(0, 0, termW, termH, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, editBuf)
+	editLI := NewLayoutItem(editW, true)
 
 	// Prompt panel
 	qAttr := TermAttr{tb.ColorBlack, tb.ColorYellow}
 	ansAttr := TermAttr{tb.ColorGreen, tb.ColorYellow}
-	CmdPrompt = NewPrompt(0, termH-5, termW, 5, 0, "", qAttr, ansAttr)
+	promptW := NewPrompt(0, termH-5, termW, 5, 0, "", qAttr, ansAttr)
+	promptLI := NewLayoutItem(promptW, false)
 
-	// Splash panel
-	sSplash := `Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. 
+	// About panel
+	sAbout := `ted - A terminal text editor
+    by Rob de la Cruz
 
-Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog. Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog.`
+    Thanks to termbox-go library`
 
-	SplashPanel = NewPanel(10, 15, 55, 18, PanelBorder, TermAttr{tb.ColorRed, tb.ColorWhite}, sSplash)
+	aboutW := NewPanel(10, 15, 55, 18, PanelBorder, TermAttr{tb.ColorRed, tb.ColorWhite}, sAbout)
+	aboutLI := NewLayoutItem(aboutW, false)
 
-	uis := UIState{}
-	uis.Focus = EditFocus
-	uis.HotKeyTips = "^O: Open File  ^S: Save File  ^Q: Quit"
-	uis.CurrentFile = "noname.txt"
+	layout := NewLayout()
+	layout.AddItem(editLI)
+	layout.AddItem(promptLI)
+	layout.AddItem(aboutLI)
+	layout.SetFocusItem(editLI)
 
-	Draw(uis)
+	tb.Clear(0, 0)
+	layout.Draw()
+	flush()
 
 	for {
 		e := tb.PollEvent()
@@ -92,99 +74,71 @@ Now is the time for all good men to come to the aid of the party. The quick brow
 				break
 			}
 
-			// ESC:
-			if e.Key == tb.KeyEsc {
-				if uis.Focus == EditFocus {
-					// ESC on editor
-				} else {
-					// ESC anywhere else, back to editor
-					uis.Focus = EditFocus
-
-					fullSizeEditV()
-				}
-			}
-
-			// CTRL-O: Open File prompt
+			// CTRL-O: Open File
 			if e.Key == tb.KeyCtrlO {
-				uis.Focus = CmdFocus
-				CmdPrompt.SetPrompt("Open file:")
-				CmdPrompt.SetEdit("")
+				promptW.SetPrompt("Open file:")
 
-				minSizeEditV()
+				promptLI.Visible = true
+				layout.SetFocusItem(promptLI)
 			}
 
 			// CTRL-S: Save File
 			if e.Key == tb.KeyCtrlS {
-				err := EditV.Buf.Save()
-				if err != nil {
-					uis.Focus = CmdFocus
-					serr := fmt.Sprintf("Error writing file (%s), ESC to cancel.", err)
-					CmdPrompt.SetPrompt(serr)
-					CmdPrompt.SetEdit("")
-				} else {
-					uis.Focus = CmdFocus
-					CmdPrompt.SetPrompt("File saved. Hit ESC.")
-					CmdPrompt.SetEdit("")
+				promptW.SetPrompt("Save file:")
+				file := editBuf.Name
+				promptW.SetEdit(file)
+
+				promptLI.Visible = true
+				layout.SetFocusItem(promptLI)
+			}
+
+			w, evid := layout.HandleEvent(&e)
+			switch w := w.(type) {
+			case *Prompt:
+				promptW := w
+
+				if evid == PromptCancel {
+					promptW.SetEdit("")
+					layout.SetFocusItem(editLI)
+					promptLI.Visible = false
+				} else if evid == PromptOK {
+					prompt := strings.TrimSpace(promptW.GetPrompt())
+					_log.Printf("prompt = '%s'\n", prompt)
+					if prompt == "Open file:" {
+						file := promptW.Text()
+						err := editBuf.Load(file)
+						if err != nil {
+							serr := fmt.Sprintf("Open file error (%s)", err)
+							promptW.SetPrompt(serr)
+							promptW.SetEdit("")
+						} else {
+							promptW.Clear()
+							layout.SetFocusItem(editLI)
+							editW.SyncText()
+							promptLI.Visible = false
+						}
+					}
+
+					if prompt == "Save file:" {
+						file := promptW.Text()
+						editBuf.Name = file
+						err := editBuf.Save(file)
+						if err != nil {
+							serr := fmt.Sprintf("Save file error (%s)", err)
+							promptW.SetPrompt(serr)
+							promptW.SetEdit("")
+						} else {
+							promptW.Clear()
+							layout.SetFocusItem(editLI)
+							promptLI.Visible = false
+						}
+					}
 				}
 			}
 		}
 
-		if uis.Focus == EditFocus {
-			// Editor receives events.
-			EditV.HandleEvent(&e)
-		} else if uis.Focus == CmdFocus {
-			// Prompt receives events.
-			tevt := CmdPrompt.HandleEvent(&e)
-			if tevt == TEExit {
-				file := CmdPrompt.Text()
-				err := EditV.Buf.Load(file)
-				if err != nil {
-					serr := fmt.Sprintf("Error opening file (%s), ESC to cancel.", err)
-					CmdPrompt.SetPrompt(serr)
-					CmdPrompt.SetEdit("")
-				} else {
-					EditV.SyncText()
-					EditV.Cur = Pos{0, 0}
-					uis.Focus = EditFocus
-
-					fullSizeEditV()
-				}
-			}
-		}
-
-		Draw(uis)
+		tb.Clear(0, 0)
+		layout.Draw()
+		flush()
 	}
-}
-
-func fullSizeEditV() {
-	editBox := EditV.Area()
-	cmdBox := CmdPrompt.Area()
-	EditV.Resize(editBox.X, editBox.Y, editBox.Width, editBox.Height+cmdBox.Height-1)
-}
-
-func minSizeEditV() {
-	editBox := EditV.Area()
-	cmdBox := CmdPrompt.Area()
-	EditV.Resize(editBox.X, editBox.Y, editBox.Width, editBox.Height-cmdBox.Height+1)
-}
-
-func Draw(uis UIState) {
-	tb.Clear(0, 0)
-
-	// Editor is always visible.
-	EditV.Draw()
-
-	if uis.Focus == EditFocus {
-		EditV.DrawCursor()
-	}
-
-	if uis.Focus == CmdFocus {
-		// Refresh CmdPrompt.
-		CmdPrompt.Draw()
-		CmdPrompt.DrawCursor()
-
-		SplashPanel.Draw()
-	}
-
-	flush()
 }

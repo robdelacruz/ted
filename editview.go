@@ -97,6 +97,8 @@ func (v *EditView) Draw() {
 	if v.Mode&EditViewStatusLine != 0 {
 		v.drawStatus()
 	}
+
+	v.drawCursor()
 }
 
 func (v *EditView) drawText() {
@@ -129,7 +131,7 @@ func (v *EditView) drawStatus() {
 	print(sBufPos, left+width-(width/3), y, v.StatusAttr)
 }
 
-func (v *EditView) DrawCursor() {
+func (v *EditView) drawCursor() {
 	//tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
 
 	x := v.Cur.X
@@ -159,7 +161,7 @@ func (v *EditView) GetText() string {
 	return v.Buf.GetText()
 }
 
-func (v *EditView) HandleEvent(e *tb.Event) {
+func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	var c rune
 	if e.Type == tb.EventKey {
 		switch e.Key {
@@ -238,6 +240,8 @@ func (v *EditView) HandleEvent(e *tb.Event) {
 		v.SyncText()
 		v.UpdateCursorBufPos(bufPos)
 	}
+
+	return v, WidgetEventNone
 }
 
 func (v *EditView) InBoundsCur() bool {

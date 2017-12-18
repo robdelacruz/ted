@@ -20,6 +20,11 @@ const (
 	PromptBorder PromptMode = 1 << iota
 )
 
+const (
+	PromptOK WidgetEventID = iota
+	PromptCancel
+)
+
 func NewPrompt(x, y, wEdit, hEdit int, mode PromptMode, prompt string, qAttr, ansAttr TermAttr) *Prompt {
 	var borderW int
 	if mode&PromptBorder != 0 {
@@ -49,6 +54,13 @@ func (pr *Prompt) SetEdit(s string) {
 func (pr *Prompt) SetPrompt(prompt string) {
 	pr.PromptPanel.SetText(prompt)
 }
+func (pr *Prompt) GetPrompt() string {
+	return pr.PromptPanel.GetText()
+}
+func (pr *Prompt) Clear() {
+	pr.SetPrompt("")
+	pr.SetEdit("")
+}
 
 func (pr *Prompt) Text() string {
 	return pr.Edit.Text()
@@ -63,19 +75,17 @@ func (pr *Prompt) Draw() {
 	pr.Edit.Draw()
 }
 
-func (pr *Prompt) DrawCursor() {
-	pr.Edit.DrawCursor()
-}
-
-func (pr *Prompt) HandleEvent(e *tb.Event) TedEvent {
+func (pr *Prompt) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	if e.Type == tb.EventKey {
 		if e.Key == tb.KeyEnter {
-			return TEExit
+			return pr, PromptOK
+		}
+		if e.Key == tb.KeyEsc {
+			return pr, PromptCancel
 		}
 	}
 
-	pr.Edit.HandleEvent(e)
-	return TENone
+	return pr.Edit.HandleEvent(e)
 }
 
 func (pr *Prompt) Pos() Pos {
