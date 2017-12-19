@@ -129,6 +129,16 @@ func (v *EditView) drawStatus() {
 	bufPos := v.BufPos()
 	sBufPos := fmt.Sprintf("%d,%d", bufPos.Y+1, bufPos.X+1)
 	print(sBufPos, left+width-(width/3), y, v.StatusAttr)
+
+	// Pos in doc (%)
+	var sYDist string
+	nBufLines := len(v.Buf.Lines)
+	if nBufLines == 0 {
+		sYDist = "0%"
+	}
+	yDist := bufPos.Y * 100 / (nBufLines - 1)
+	sYDist = fmt.Sprintf(" %d%% ", yDist)
+	print(sYDist, left+width-len(sYDist), y, v.StatusAttr)
 }
 
 func (v *EditView) drawCursor() {
@@ -167,16 +177,12 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		switch e.Key {
 		case tb.KeyArrowLeft:
 			v.CurLeft()
-			v.SyncText()
 		case tb.KeyArrowRight:
 			v.CurRight()
-			v.SyncText()
 		case tb.KeyArrowUp:
 			v.CurUp()
-			v.SyncText()
 		case tb.KeyArrowDown:
 			v.CurDown()
-			v.SyncText()
 		case tb.KeyCtrlN:
 			fallthrough
 		case tb.KeyCtrlF:
