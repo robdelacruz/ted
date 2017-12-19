@@ -42,9 +42,11 @@ ted - A terminal text editor
 	editLI := NewLayoutItem(editW, true)
 
 	// Prompt panel
-	qAttr := TermAttr{tb.ColorBlack, tb.ColorYellow}
-	ansAttr := TermAttr{tb.ColorGreen, tb.ColorYellow}
-	promptW := NewPrompt(0, termH-5, termW, 5, 0, "", qAttr, ansAttr)
+	qAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
+	ansAttr := TermAttr{tb.ColorBlack, tb.ColorYellow}
+	promptWWidth := termW / 2
+	promptW := NewPrompt(0, 0, promptWWidth, 7, PromptBorder, "", qAttr, ansAttr)
+	promptW.SetPos(termW/2-promptWWidth/2, termH/2-promptW.Area().Height)
 	promptLI := NewLayoutItem(promptW, false)
 
 	// About panel
@@ -108,7 +110,7 @@ ted - A terminal text editor
 						file := promptW.Text()
 						err := editBuf.Load(file)
 						if err != nil {
-							serr := fmt.Sprintf("Open file error (%s)", err)
+							serr := fmt.Sprintf("Error (%s). ESC to continue", err)
 							promptW.SetPrompt(serr)
 							promptW.SetEdit("")
 						} else {
@@ -124,7 +126,7 @@ ted - A terminal text editor
 						editBuf.Name = file
 						err := editBuf.Save(file)
 						if err != nil {
-							serr := fmt.Sprintf("Save file error (%s)", err)
+							serr := fmt.Sprintf("Error (%s). ESC to continue", err)
 							promptW.SetPrompt(serr)
 							promptW.SetEdit("")
 						} else {

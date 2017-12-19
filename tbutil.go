@@ -43,6 +43,13 @@ func print(s string, x, y int, attr TermAttr) {
 	}
 }
 
+func clearArea(area Area, attr TermAttr) {
+	srow := strings.Repeat(" ", area.Width)
+	for y := area.Y; y < area.Y+area.Height; y++ {
+		print(srow, area.X, y, attr)
+	}
+}
+
 func drawBox(x, y, width, height int, attr TermAttr) {
 	print("┌", x, y, attr)
 	print("┐", x+width-1, y, attr)
@@ -65,4 +72,16 @@ func drawBox(x, y, width, height int, attr TermAttr) {
 
 func runeslen(s string) int {
 	return len([]rune(s))
+}
+
+func adjPos(outline, content Area, x, y, borderWidth, paddingWidth int) (retOutline, retContent Area) {
+	retOutline = outline
+	retContent = content
+
+	retOutline.X = x
+	retOutline.Y = y
+
+	retContent = NewArea(x+borderWidth+paddingWidth, y+borderWidth+paddingWidth, retOutline.Width-borderWidth*2-paddingWidth*2, retOutline.Height-borderWidth*2-paddingWidth*2)
+
+	return retOutline, retContent
 }

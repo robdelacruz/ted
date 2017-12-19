@@ -52,6 +52,7 @@ func (p *Panel) Area() Area {
 }
 
 func (p *Panel) Draw() {
+	clearArea(p.Outline, p.ContentAttr)
 	if p.Mode&PanelBorder != 0 {
 		drawBox(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height, p.ContentAttr)
 	}
@@ -75,4 +76,13 @@ func (p *Panel) SyncText() {
 
 func (p *Panel) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	return p, WidgetEventNone
+}
+
+func (p *Panel) SetPos(x, y int) {
+	var borderWidth int
+	if p.Mode&PanelBorder != 0 {
+		borderWidth = 1
+	}
+	paddingWidth := 0
+	p.Outline, p.Content = adjPos(p.Outline, p.Content, x, y, borderWidth, paddingWidth)
 }

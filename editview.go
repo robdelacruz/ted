@@ -88,6 +88,7 @@ func min(n1, n2 int) int {
 }
 
 func (v *EditView) Draw() {
+	clearArea(v.Outline, v.ContentAttr)
 	if v.Mode&EditViewBorder != 0 {
 		boxAttr := v.ContentAttr
 		drawBox(v.Outline.X, v.Outline.Y, v.Outline.Width, v.Outline.Height, boxAttr)
@@ -445,4 +446,13 @@ func (v *EditView) CurWordBack() {
 	}
 
 	v.AdjustScrollOffset()
+}
+
+func (v *EditView) SetPos(x, y int) {
+	var borderWidth int
+	if v.Mode&EditViewBorder != 0 {
+		borderWidth = 1
+	}
+	paddingWidth := 0
+	v.Outline, v.Content = adjPos(v.Outline, v.Content, x, y, borderWidth, paddingWidth)
 }

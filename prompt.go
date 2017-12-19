@@ -10,8 +10,10 @@ type Prompt struct {
 	PromptPanel *Panel
 	Edit        *EditView
 
-	Outline Area
-	Mode    PromptMode
+	Outline        Area
+	Content        Area
+	Mode           PromptMode
+	QAttr, AnsAttr TermAttr
 }
 
 type PromptMode uint
@@ -25,24 +27,26 @@ const (
 	PromptCancel
 )
 
-func NewPrompt(x, y, wEdit, hEdit int, mode PromptMode, prompt string, qAttr, ansAttr TermAttr) *Prompt {
-	var borderW int
+func NewPrompt(x, y, w, h int, mode PromptMode, prompt string, qAttr, ansAttr TermAttr) *Prompt {
+	outline := NewArea(x, y, w, h)
+	content := outline
+
 	if mode&PromptBorder != 0 {
-		borderW = 1
+		content = NewArea(x+1, y+1, w-2, h-2)
 	}
-	promptPanel := NewPanel(x+borderW, y+borderW, wEdit, 1, 0, qAttr, prompt)
-	ppPos, ppSize := promptPanel.Pos(), promptPanel.Size()
 
-	edit := NewEditView(ppPos.X, ppPos.Y+1, wEdit, hEdit, 0, ansAttr, BWAttr, nil)
-	editSize := edit.Size()
-
-	outline := NewArea(ppPos.X-borderW, ppPos.Y-borderW, ppSize.Width+2*borderW, ppSize.Height+editSize.Height+2*borderW)
+	nEditRows := 2
+	promptPanel := NewPanel(content.X, content.Y, content.Width, content.Height-nEditRows, 0, qAttr, prompt)
+	edit := NewEditView(content.X, content.Y+2, content.Width, nEditRows, 0, ansAttr, BWAttr, nil)
 
 	pr := &Prompt{}
 	pr.Outline = outline
+	pr.Content = content
 	pr.PromptPanel = promptPanel
 	pr.Edit = edit
 	pr.Mode = mode
+	pr.QAttr = qAttr
+	pr.AnsAttr = ansAttr
 	return pr
 }
 
@@ -67,6 +71,7 @@ func (pr *Prompt) Text() string {
 }
 
 func (pr *Prompt) Draw() {
+	clearArea(pr.Outline, pr.QAttr)
 	if pr.Mode&PromptBorder != 0 {
 		drawBox(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height, BWAttr)
 	}
@@ -96,4 +101,16 @@ func (pr *Prompt) Size() Size {
 }
 func (pr *Prompt) Area() Area {
 	return NewArea(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height)
+}
+
+func (pr *Prompt) SetPos(x, y int) {
+	var borderWidth int
+	if pr.Mode&PromptBorder != 0 {
+		borderWidth = 1
+	}
+	paddingWidth := 0
+	pr.Outline, pr.Content = adjPos(pr.Outline, pr.Content, x, y, borderWidth, paddingWidth)
+
+	pr.PromptPanel.SetPos(pr.Content.X, pr.Content.Y)
+	pr.Edit.SetPos(pr.Content.X, pr.Content.Y+2)
 }

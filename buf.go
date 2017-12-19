@@ -102,7 +102,7 @@ func (buf *Buf) GetText() string {
 func (buf *Buf) Load(file string) error {
 	bs, err := ioutil.ReadFile(file)
 	if err != nil {
-		return fmt.Errorf("Buf Load error (%s)", err)
+		return fmt.Errorf("%s", err)
 	}
 
 	buf.ClearDirty()
@@ -114,13 +114,13 @@ func (buf *Buf) Load(file string) error {
 // Writes contents to filename as indicated in buf.Name.
 func (buf *Buf) Save(file string) error {
 	if file == "" {
-		return errors.New("Buf Save error (no filename given)")
+		return errors.New("No filename given")
 	}
 
 	bs := []byte(buf.GetText())
 	err := ioutil.WriteFile(file, bs, 0644)
 	if err != nil {
-		return fmt.Errorf("Buf Save error (%s)", err)
+		return fmt.Errorf("%s", err)
 	}
 
 	buf.Name = file
