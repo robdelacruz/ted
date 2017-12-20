@@ -86,6 +86,11 @@ func (buf *Buf) SetText(s string) {
 	for scanner.Scan() {
 		buf.WriteLine(scanner.Text())
 	}
+
+	// Always have at least one line.
+	if len(buf.Lines) == 0 {
+		buf.WriteLine("")
+	}
 }
 
 func (buf *Buf) GetText() string {

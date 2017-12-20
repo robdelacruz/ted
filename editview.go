@@ -143,8 +143,6 @@ func (v *EditView) drawStatus() {
 }
 
 func (v *EditView) drawCursor() {
-	//tb.SetCursor(v.Content.X+v.Cur.X, v.Content.Y+v.Cur.Y)
-
 	x := v.Cur.X
 	y := v.Cur.Y - v.TextBlk.BlkYOffset
 	tb.SetCursor(v.Content.X+x, v.Content.Y+y)
@@ -153,7 +151,11 @@ func (v *EditView) drawCursor() {
 func (v *EditView) Clear() {
 	v.Buf.Clear()
 	v.SyncText()
+	v.ResetCur()
+}
+func (v *EditView) ResetCur() {
 	v.Cur = Pos{0, 0}
+	v.TextBlk.BlkYOffset = 0
 }
 func (v *EditView) SyncText() {
 	v.TextBlk.FillWithBuf(v.Buf)

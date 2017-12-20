@@ -44,8 +44,17 @@ ted - A terminal text editor
 	// Prompt panel
 	qAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	ansAttr := TermAttr{tb.ColorBlack, tb.ColorYellow}
+	promptOpts := PromptOptions{
+		ContentPadding: 1,
+		QAttr:          qAttr,
+		QHeight:        1,
+		AnsAttr:        ansAttr,
+		AnsHeight:      1,
+		HintHeight:     0,
+		StatusHeight:   0,
+	}
 	promptWWidth := termW / 2
-	promptW := NewPrompt(0, 0, promptWWidth, 7, PromptBorder, "", qAttr, ansAttr)
+	promptW := NewPrompt(0, 0, promptWWidth, PromptBorder, &promptOpts)
 	promptW.SetPos(termW/2-promptWWidth/2, termH/2-promptW.Area().Height)
 	promptLI := NewLayoutItem(promptW, false)
 
@@ -55,7 +64,8 @@ ted - A terminal text editor
 
     Thanks to termbox-go library`
 
-	aboutW := NewPanel(10, 15, 55, 18, PanelBorder, TermAttr{tb.ColorRed, tb.ColorWhite}, sAbout)
+	aboutOpts := PanelOptions{sAbout, TermAttr{tb.ColorRed, tb.ColorWhite}, PanelBorder}
+	aboutW := NewPanel(10, 15, 55, 18, aboutOpts)
 	aboutLI := NewLayoutItem(aboutW, false)
 
 	layout := NewLayout()
@@ -107,7 +117,7 @@ ted - A terminal text editor
 					prompt := strings.TrimSpace(promptW.GetPrompt())
 					_log.Printf("prompt = '%s'\n", prompt)
 					if prompt == "Open file:" {
-						file := promptW.Text()
+						file := promptW.GetEditText()
 						err := editBuf.Load(file)
 						if err != nil {
 							serr := fmt.Sprintf("Error (%s). ESC to continue", err)
@@ -116,13 +126,14 @@ ted - A terminal text editor
 						} else {
 							promptW.Clear()
 							layout.SetFocusItem(editLI)
+							editW.ResetCur()
 							editW.SyncText()
 							promptLI.Visible = false
 						}
 					}
 
 					if prompt == "Save file:" {
-						file := promptW.Text()
+						file := promptW.GetEditText()
 						editBuf.Name = file
 						err := editBuf.Save(file)
 						if err != nil {
