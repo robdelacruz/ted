@@ -75,15 +75,16 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 	var hintPanel *Panel
 	if opts.HintHeight > 0 {
 		hintOpts := PanelOptions{opts.HintText, opts.HintAttr, 0}
-		hintPanel := NewPanel(x, y+edit.Area().Height, w, opts.HintHeight, hintOpts)
+		hintPanel = NewPanel(x, y, w, opts.HintHeight, hintOpts)
 
 		y += hintPanel.Area().Height
 	}
 
 	var statusPanel *Panel
 	if opts.StatusHeight > 0 {
+		y++
 		statusOpts := PanelOptions{opts.StatusText, opts.StatusAttr, 0}
-		statusPanel := NewPanel(x, y+hintPanel.Area().Height, w, opts.StatusHeight, statusOpts)
+		statusPanel = NewPanel(x, y, w, opts.StatusHeight, statusOpts)
 
 		y += statusPanel.Area().Height
 	}
@@ -122,6 +123,7 @@ func (pr *Prompt) SetPos(x, y int) {
 		y += pr.HintPanel.Area().Height
 	}
 	if pr.StatusPanel != nil {
+		y++
 		pr.StatusPanel.SetPos(x, y)
 	}
 }

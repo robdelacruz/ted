@@ -44,14 +44,18 @@ ted - A terminal text editor
 	// Prompt panel
 	qAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	ansAttr := TermAttr{tb.ColorBlack, tb.ColorYellow}
+	hintAttr := TermAttr{tb.ColorCyan, tb.ColorBlack}
+	statusPromptAttr := TermAttr{tb.ColorRed, tb.ColorBlack}
 	promptOpts := PromptOptions{
 		ContentPadding: 1,
 		QAttr:          qAttr,
 		QHeight:        1,
 		AnsAttr:        ansAttr,
 		AnsHeight:      1,
-		HintHeight:     0,
-		StatusHeight:   0,
+		HintAttr:       hintAttr,
+		HintHeight:     1,
+		StatusAttr:     statusPromptAttr,
+		StatusHeight:   2,
 	}
 	promptWWidth := termW / 2
 	promptW := NewPrompt(0, 0, promptWWidth, PromptBorder, &promptOpts)
@@ -89,6 +93,8 @@ ted - A terminal text editor
 			// CTRL-O: Open File
 			if e.Key == tb.KeyCtrlO {
 				promptW.SetPrompt("Open file:")
+				promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
+				promptW.SetStatus("")
 
 				promptLI.Visible = true
 				layout.SetFocusItem(promptLI)
@@ -97,6 +103,9 @@ ted - A terminal text editor
 			// CTRL-S: Save File
 			if e.Key == tb.KeyCtrlS {
 				promptW.SetPrompt("Save file:")
+				promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
+				promptW.SetStatus("")
+
 				file := editBuf.Name
 				promptW.SetEdit(file)
 
@@ -120,8 +129,8 @@ ted - A terminal text editor
 						file := promptW.GetEditText()
 						err := editBuf.Load(file)
 						if err != nil {
-							serr := fmt.Sprintf("Error (%s). ESC to continue", err)
-							promptW.SetPrompt(serr)
+							serr := fmt.Sprintf("Error (%s).", err)
+							promptW.SetStatus(serr)
 							promptW.SetEdit("")
 						} else {
 							promptW.Clear()
@@ -137,8 +146,8 @@ ted - A terminal text editor
 						editBuf.Name = file
 						err := editBuf.Save(file)
 						if err != nil {
-							serr := fmt.Sprintf("Error (%s). ESC to continue", err)
-							promptW.SetPrompt(serr)
+							serr := fmt.Sprintf("Error (%s).", err)
+							promptW.SetStatus(serr)
 							promptW.SetEdit("")
 						} else {
 							promptW.Clear()
