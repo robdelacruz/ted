@@ -103,7 +103,7 @@ ted - A terminal text editor
 			// CTRL-S: Save File
 			if e.Key == tb.KeyCtrlS {
 				promptW.SetPrompt("Save file:")
-				promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
+				promptW.SetHint("<ENTER> to Save, <ESC> to Cancel")
 				promptW.SetStatus("")
 
 				file := editBuf.Name

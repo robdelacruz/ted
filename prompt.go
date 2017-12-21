@@ -145,7 +145,7 @@ func (pr *Prompt) SetHint(s string) {
 		pr.HintPanel.SetText(s)
 	}
 }
-func (pr *Prompt) GetHint(s string) string {
+func (pr *Prompt) GetHint() string {
 	if pr.HintPanel != nil {
 		return pr.HintPanel.GetText()
 	}
@@ -156,7 +156,7 @@ func (pr *Prompt) SetStatus(s string) {
 		pr.StatusPanel.SetText(s)
 	}
 }
-func (pr *Prompt) GetStatus(s string) string {
+func (pr *Prompt) GetStatus() string {
 	if pr.StatusPanel != nil {
 		return pr.StatusPanel.GetText()
 	}
@@ -170,17 +170,19 @@ func (pr *Prompt) Clear() {
 }
 
 func (pr *Prompt) Draw() {
-	clearArea(pr.Outline, pr.Opts.QAttr)
+	outline := pr.Area()
+
+	clearArea(outline, pr.Opts.QAttr)
 	if pr.Mode&PromptBorder != 0 {
-		drawBox(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height, BWAttr)
+		drawBox(outline.X, outline.Y, outline.Width, outline.Height, BWAttr)
 	}
 
 	pr.QPanel.Draw()
 	pr.Edit.Draw()
-	if pr.HintPanel != nil {
+	if pr.HintPanel != nil && pr.GetHint() != "" {
 		pr.HintPanel.Draw()
 	}
-	if pr.StatusPanel != nil {
+	if pr.StatusPanel != nil && pr.GetStatus() != "" {
 		pr.StatusPanel.Draw()
 	}
 }
@@ -205,5 +207,13 @@ func (pr *Prompt) Size() Size {
 	return Size{pr.Outline.Width, pr.Outline.Height}
 }
 func (pr *Prompt) Area() Area {
-	return NewArea(pr.Outline.X, pr.Outline.Y, pr.Outline.Width, pr.Outline.Height)
+	outline := pr.Outline
+	if pr.GetHint() == "" {
+		outline.Height -= pr.HintPanel.Area().Height
+	}
+	if pr.GetStatus() == "" {
+		outline.Height -= pr.StatusPanel.Area().Height
+		outline.Height--
+	}
+	return outline
 }

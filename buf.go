@@ -96,9 +96,11 @@ func (buf *Buf) SetText(s string) {
 func (buf *Buf) GetText() string {
 	var b bytes.Buffer
 
-	for _, l := range buf.Lines {
+	for i, l := range buf.Lines {
 		b.WriteString(l)
-		b.WriteString("\n")
+		if i < len(buf.Lines)-1 {
+			b.WriteString("\n")
+		}
 	}
 
 	return b.String()
