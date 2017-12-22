@@ -5,7 +5,7 @@ import (
 )
 
 type Widget interface {
-	Area() Area
+	Rect() Rect
 	Draw()
 	HandleEvent(e *tb.Event) (Widget, WidgetEventID)
 }
@@ -37,8 +37,8 @@ func NewLayoutItem(widget Widget, visible bool) *LayoutItem {
 	}
 }
 
-func (layout *Layout) Area() Area {
-	return NewArea(0, 0, 0, 0)
+func (layout *Layout) Rect() Rect {
+	return NewRect(0, 0, 0, 0)
 }
 
 func (layout *Layout) AddItem(item *LayoutItem) {

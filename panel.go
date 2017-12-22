@@ -5,8 +5,8 @@ import (
 )
 
 type Panel struct {
-	Content Area
-	Outline Area
+	Content Rect
+	Outline Rect
 	*Buf
 	*TextBlk
 	Opts PanelOptions
@@ -25,18 +25,18 @@ type PanelOptions struct {
 }
 
 func NewPanel(x, y, w, h int, opts PanelOptions) *Panel {
-	outline := NewArea(x, y, w, h)
+	outline := NewRect(x, y, w, h)
 	content := outline
 
 	if opts.Mode&PanelBorder != 0 {
-		content = NewArea(x+1, y+1, w-2, h-2)
+		content = NewRect(x+1, y+1, w-2, h-2)
 	}
 
 	p := &Panel{}
 	p.Outline = outline
 	p.Content = content
 	p.Buf = NewBuf()
-	p.TextBlk = NewTextBlk(content.Width, 0)
+	p.TextBlk = NewTextBlk(content.W, 0)
 	p.Opts = opts
 
 	p.Buf.SetText(opts.Text)
@@ -49,16 +49,16 @@ func (p *Panel) Pos() Pos {
 	return Pos{p.Outline.X, p.Outline.Y}
 }
 func (p *Panel) Size() Size {
-	return Size{p.Outline.Width, p.Outline.Height}
+	return Size{p.Outline.W, p.Outline.H}
 }
-func (p *Panel) Area() Area {
-	return NewArea(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height)
+func (p *Panel) Rect() Rect {
+	return NewRect(p.Outline.X, p.Outline.Y, p.Outline.W, p.Outline.H)
 }
 
 func (p *Panel) Draw() {
-	clearArea(p.Outline, p.Opts.Attr)
+	clearRect(p.Outline, p.Opts.Attr)
 	if p.Opts.Mode&PanelBorder != 0 {
-		drawBox(p.Outline.X, p.Outline.Y, p.Outline.Width, p.Outline.Height, p.Opts.Attr)
+		drawBox(p.Outline.X, p.Outline.Y, p.Outline.W, p.Outline.H, p.Opts.Attr)
 	}
 
 	p.drawText()

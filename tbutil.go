@@ -8,20 +8,15 @@ import (
 )
 
 type Pos struct{ X, Y int }
-type Size struct{ Width, Height int }
-type Area struct {
-	Pos
-	Size
-}
+type Size struct{ W, H int }
+type Rect struct{ X, Y, W, H int }
+
 type TermAttr struct{ Fg, Bg tb.Attribute }
 
 var BWAttr TermAttr
 
-func NewArea(x, y, w, h int) Area {
-	return Area{
-		Pos:  Pos{x, y},
-		Size: Size{w, h},
-	}
+func NewRect(x, y, w, h int) Rect {
+	return Rect{x, y, w, h}
 }
 
 func (pos *Pos) String() string {
@@ -43,10 +38,10 @@ func print(s string, x, y int, attr TermAttr) {
 	}
 }
 
-func clearArea(area Area, attr TermAttr) {
-	srow := strings.Repeat(" ", area.Width)
-	for y := area.Y; y < area.Y+area.Height; y++ {
-		print(srow, area.X, y, attr)
+func clearRect(rect Rect, attr TermAttr) {
+	srow := strings.Repeat(" ", rect.W)
+	for y := rect.Y; y < rect.Y+rect.H; y++ {
+		print(srow, rect.X, y, attr)
 	}
 }
 
@@ -74,14 +69,14 @@ func runeslen(s string) int {
 	return len([]rune(s))
 }
 
-func adjPos(outline, content Area, x, y, borderWidth, paddingWidth int) (retOutline, retContent Area) {
+func adjPos(outline, content Rect, x, y, borderWidth, paddingWidth int) (retOutline, retContent Rect) {
 	retOutline = outline
 	retContent = content
 
 	retOutline.X = x
 	retOutline.Y = y
 
-	retContent = NewArea(x+borderWidth+paddingWidth, y+borderWidth+paddingWidth, retOutline.Width-borderWidth*2-paddingWidth*2, retOutline.Height-borderWidth*2-paddingWidth*2)
+	retContent = NewRect(x+borderWidth+paddingWidth, y+borderWidth+paddingWidth, retOutline.W-borderWidth*2-paddingWidth*2, retOutline.H-borderWidth*2-paddingWidth*2)
 
 	return retOutline, retContent
 }

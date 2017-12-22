@@ -5,7 +5,7 @@ import (
 )
 
 type Label struct {
-	Content Area
+	Content Rect
 	Mode    LabelMode
 	Text    string
 	Attr    TermAttr
@@ -19,7 +19,7 @@ const (
 
 func NewLabel(s string, x, y, w, h int, attr TermAttr, mode LabelMode) *Label {
 	l := &Label{}
-	l.Content = NewArea(x, y, w, h)
+	l.Content = NewRect(x, y, w, h)
 	l.Mode = mode
 	l.Text = s
 	l.Attr = attr
@@ -42,7 +42,7 @@ func (l *Label) Draw() {
 
 	// Don't print beyond label width.
 	for i, c := range l.Text {
-		if i > l.Content.Width-1 {
+		if i > l.Content.W-1 {
 			break
 		}
 		tb.SetCell(x, y, c, l.Attr.Fg, l.Attr.Bg)

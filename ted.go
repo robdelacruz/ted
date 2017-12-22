@@ -59,7 +59,7 @@ ted - A terminal text editor
 	}
 	promptWWidth := termW / 2
 	promptW := NewPrompt(0, 0, promptWWidth, PromptBorder, &promptOpts)
-	promptW.SetPos(termW/2-promptWWidth/2, termH/2-promptW.Area().Height)
+	promptW.SetPos(termW/2-promptWWidth/2, termH/2-promptW.Rect().H)
 	promptLI := NewLayoutItem(promptW, false)
 
 	// About panel

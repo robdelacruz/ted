@@ -12,8 +12,8 @@ type Prompt struct {
 	HintPanel   *Panel
 	StatusPanel *Panel
 
-	Outline Area
-	Content Area
+	Outline Rect
+	Content Rect
 	Mode    PromptMode
 	Opts    *PromptOptions
 }
@@ -46,12 +46,12 @@ type PromptOptions struct {
 }
 
 func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
-	outline := NewArea(x, y, w, 0)
+	outline := NewRect(x, y, w, 0)
 	var borderWidth int
 	if mode&PromptBorder != 0 {
 		borderWidth = 1
 	}
-	content := NewArea(x+borderWidth+opts.ContentPadding, y+borderWidth+opts.ContentPadding, w-borderWidth*2-opts.ContentPadding*2, 0)
+	content := NewRect(x+borderWidth+opts.ContentPadding, y+borderWidth+opts.ContentPadding, w-borderWidth*2-opts.ContentPadding*2, 0)
 
 	if opts.QHeight == 0 {
 		opts.QHeight = 1
@@ -62,22 +62,22 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 
 	x = content.X
 	y = content.Y
-	w = content.Width
+	w = content.W
 
 	qOpts := PanelOptions{opts.QText, opts.QAttr, 0}
 	qPanel := NewPanel(x, y, w, opts.QHeight, qOpts)
 
-	y += qPanel.Area().Height
+	y += qPanel.Rect().H
 	edit := NewEditView(x, y, w, opts.AnsHeight, 0, opts.AnsAttr, BWAttr, nil)
 
-	y += edit.Area().Height
+	y += edit.Rect().H
 
 	var hintPanel *Panel
 	if opts.HintHeight > 0 {
 		hintOpts := PanelOptions{opts.HintText, opts.HintAttr, 0}
 		hintPanel = NewPanel(x, y, w, opts.HintHeight, hintOpts)
 
-		y += hintPanel.Area().Height
+		y += hintPanel.Rect().H
 	}
 
 	var statusPanel *Panel
@@ -86,11 +86,11 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 		statusOpts := PanelOptions{opts.StatusText, opts.StatusAttr, 0}
 		statusPanel = NewPanel(x, y, w, opts.StatusHeight, statusOpts)
 
-		y += statusPanel.Area().Height
+		y += statusPanel.Rect().H
 	}
 
-	content.Height = y - content.Y
-	outline.Height = content.Height + borderWidth*2 + opts.ContentPadding*2
+	content.H = y - content.Y
+	outline.H = content.H + borderWidth*2 + opts.ContentPadding*2
 
 	pr := &Prompt{}
 	pr.Outline = outline
@@ -114,13 +114,13 @@ func (pr *Prompt) SetPos(x, y int) {
 	x = pr.Content.X
 	y = pr.Content.Y
 	pr.QPanel.SetPos(x, y)
-	y += pr.QPanel.Area().Height
+	y += pr.QPanel.Rect().H
 	pr.Edit.SetPos(x, y)
-	y += pr.Edit.Area().Height
+	y += pr.Edit.Rect().H
 
 	if pr.HintPanel != nil {
 		pr.HintPanel.SetPos(x, y)
-		y += pr.HintPanel.Area().Height
+		y += pr.HintPanel.Rect().H
 	}
 	if pr.StatusPanel != nil {
 		y++
@@ -170,11 +170,11 @@ func (pr *Prompt) Clear() {
 }
 
 func (pr *Prompt) Draw() {
-	outline := pr.Area()
+	outline := pr.Rect()
 
-	clearArea(outline, pr.Opts.QAttr)
+	clearRect(outline, pr.Opts.QAttr)
 	if pr.Mode&PromptBorder != 0 {
-		drawBox(outline.X, outline.Y, outline.Width, outline.Height, BWAttr)
+		drawBox(outline.X, outline.Y, outline.W, outline.H, BWAttr)
 	}
 
 	pr.QPanel.Draw()
@@ -204,16 +204,16 @@ func (pr *Prompt) Pos() Pos {
 	return Pos{pr.Outline.X, pr.Outline.Y}
 }
 func (pr *Prompt) Size() Size {
-	return Size{pr.Outline.Width, pr.Outline.Height}
+	return Size{pr.Outline.W, pr.Outline.H}
 }
-func (pr *Prompt) Area() Area {
+func (pr *Prompt) Rect() Rect {
 	outline := pr.Outline
 	if pr.GetHint() == "" {
-		outline.Height -= pr.HintPanel.Area().Height
+		outline.H -= pr.HintPanel.Rect().H
 	}
 	if pr.GetStatus() == "" {
-		outline.Height -= pr.StatusPanel.Area().Height
-		outline.Height--
+		outline.H -= pr.StatusPanel.Rect().H
+		outline.H--
 	}
 	return outline
 }

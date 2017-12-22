@@ -27,37 +27,37 @@ func NewTextBlk(width, height int) *TextBlk {
 
 // Preserve contents while resizing textblk.
 func (blk *TextBlk) Resize(width, height int) {
-	if height > blk.Height {
-		for y := 0; y < height-blk.Height; y++ {
+	if height > blk.H {
+		for y := 0; y < height-blk.H; y++ {
 			row := make([]rune, width)
 			blk.Text = append(blk.Text, row)
 		}
-	} else if height < blk.Height {
+	} else if height < blk.H {
 		blk.Text = blk.Text[:height]
 	}
 
-	if width > blk.Width {
+	if width > blk.W {
 		for y := range blk.Text {
-			addlRunes := make([]rune, width-blk.Width)
+			addlRunes := make([]rune, width-blk.W)
 			blk.Text[y] = append(blk.Text[y], addlRunes...)
 		}
-	} else if width < blk.Width {
+	} else if width < blk.W {
 		for y := range blk.Text {
 			blk.Text[y] = blk.Text[y][:width]
 		}
 	}
 
-	blk.Height = height
-	blk.Width = width
+	blk.H = height
+	blk.W = width
 	blk.RowWidth = width - 1 // Leave 1 char room for CR/LF.
 }
 
 func (blk *TextBlk) AddRows(n int) {
-	blk.Resize(blk.Width, blk.Height+n)
+	blk.Resize(blk.W, blk.H+n)
 }
 
 func (blk *TextBlk) ClearRow(yBlk, xBlkStart, yBuf, xBuf int) {
-	for xBlk := xBlkStart; xBlk < blk.Width; xBlk++ {
+	for xBlk := xBlkStart; xBlk < blk.W; xBlk++ {
 		blk.Text[yBlk][xBlk] = 0
 
 		blk.BufFromBlk[Pos{xBlk, yBlk}] = Pos{xBuf, yBuf}
@@ -113,7 +113,7 @@ func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
 	xBlk := 0
 
 	// Add new rows as needed.
-	if yBlk > blk.Height-1 {
+	if yBlk > blk.H-1 {
 		blk.AddRows(1)
 	}
 
@@ -128,7 +128,7 @@ func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
 		}
 
 		// Add new rows as needed.
-		if yBlk > blk.Height-1 {
+		if yBlk > blk.H-1 {
 			blk.AddRows(1)
 		}
 
@@ -151,7 +151,7 @@ func (blk *TextBlk) writeBufLine(buf *Buf, yBuf int, yBlk int) (nextYBlk int) {
 				xBlk = 0
 
 				// Add new rows as needed.
-				if yBlk > blk.Height-1 {
+				if yBlk > blk.H-1 {
 					blk.AddRows(1)
 				}
 			}
@@ -176,7 +176,7 @@ func (blk *TextBlk) FillWithBuf(buf *Buf) {
 	}
 
 	// Remove any extra rows leftover from previous draw.
-	blk.Resize(blk.Width, yBlk)
+	blk.Resize(blk.W, yBlk)
 
 	blk.Cur = blk.BlkFromBuf[bufPos]
 }
@@ -191,14 +191,14 @@ func (blk *TextBlk) BufPos() Pos {
 // Print textblk contents to a rectangular area.
 // Textblk contents that don't fit are cropped out.
 // Empty space is painted to the background color (attribute).
-func (blk *TextBlk) PrintToArea(content Area, contentAttr TermAttr) {
+func (blk *TextBlk) PrintToArea(content Rect, contentAttr TermAttr) {
 	text := blk.Text
 	yBlk := blk.BlkYOffset
-	yBlkEdge := min(blk.Height, yBlk+content.Height)
+	yBlkEdge := min(blk.H, yBlk+content.H)
 	y := 0
 
 	for yBlk < yBlkEdge {
-		for xBlk := 0; xBlk < min(blk.Width, content.Width); xBlk++ {
+		for xBlk := 0; xBlk < min(blk.W, content.W); xBlk++ {
 			c := text[yBlk][xBlk]
 			if c == 0 {
 				c = ' '
@@ -211,8 +211,8 @@ func (blk *TextBlk) PrintToArea(content Area, contentAttr TermAttr) {
 	}
 
 	// Paint the rest of the content area.
-	s := strings.Repeat(" ", content.Width)
-	for y < content.Height {
+	s := strings.Repeat(" ", content.W)
+	for y < content.H {
 		print(s, content.X, y+content.Y, contentAttr)
 		y++
 	}
