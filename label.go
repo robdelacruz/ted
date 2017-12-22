@@ -5,10 +5,10 @@ import (
 )
 
 type Label struct {
-	Content Rect
-	Mode    LabelMode
-	Text    string
-	Attr    TermAttr
+	Rect
+	Mode LabelMode
+	Text string
+	Attr TermAttr
 }
 
 type LabelMode uint
@@ -19,7 +19,7 @@ const (
 
 func NewLabel(s string, x, y, w, h int, attr TermAttr, mode LabelMode) *Label {
 	l := &Label{}
-	l.Content = NewRect(x, y, w, h)
+	l.Rect = NewRect(x, y, w, h)
 	l.Mode = mode
 	l.Text = s
 	l.Attr = attr
@@ -32,7 +32,7 @@ func (l *Label) SetText(s string) {
 }
 
 func (l *Label) Draw() {
-	x, y := l.Content.X, l.Content.Y
+	x, y := l.X, l.Y
 
 	// AutoSize set, so ignore label width.
 	if l.Mode&LabelAutoSize != 0 {
@@ -42,7 +42,7 @@ func (l *Label) Draw() {
 
 	// Don't print beyond label width.
 	for i, c := range l.Text {
-		if i > l.Content.W-1 {
+		if i > l.W-1 {
 			break
 		}
 		tb.SetCell(x, y, c, l.Attr.Fg, l.Attr.Bg)

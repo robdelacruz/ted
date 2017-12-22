@@ -5,7 +5,6 @@ import (
 )
 
 type Widget interface {
-	Rect() Rect
 	Draw()
 	HandleEvent(e *tb.Event) (Widget, WidgetEventID)
 }

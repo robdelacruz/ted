@@ -45,16 +45,6 @@ func NewPanel(x, y, w, h int, opts PanelOptions) *Panel {
 	return p
 }
 
-func (p *Panel) Pos() Pos {
-	return Pos{p.Outline.X, p.Outline.Y}
-}
-func (p *Panel) Size() Size {
-	return Size{p.Outline.W, p.Outline.H}
-}
-func (p *Panel) Rect() Rect {
-	return NewRect(p.Outline.X, p.Outline.Y, p.Outline.W, p.Outline.H)
-}
-
 func (p *Panel) Draw() {
 	clearRect(p.Outline, p.Opts.Attr)
 	if p.Opts.Mode&PanelBorder != 0 {

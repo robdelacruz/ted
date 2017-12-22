@@ -67,17 +67,17 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 	qOpts := PanelOptions{opts.QText, opts.QAttr, 0}
 	qPanel := NewPanel(x, y, w, opts.QHeight, qOpts)
 
-	y += qPanel.Rect().H
+	y += qPanel.H
 	edit := NewEditView(x, y, w, opts.AnsHeight, 0, opts.AnsAttr, BWAttr, nil)
 
-	y += edit.Rect().H
+	y += edit.H
 
 	var hintPanel *Panel
 	if opts.HintHeight > 0 {
 		hintOpts := PanelOptions{opts.HintText, opts.HintAttr, 0}
 		hintPanel = NewPanel(x, y, w, opts.HintHeight, hintOpts)
 
-		y += hintPanel.Rect().H
+		y += hintPanel.H
 	}
 
 	var statusPanel *Panel
@@ -86,7 +86,7 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 		statusOpts := PanelOptions{opts.StatusText, opts.StatusAttr, 0}
 		statusPanel = NewPanel(x, y, w, opts.StatusHeight, statusOpts)
 
-		y += statusPanel.Rect().H
+		y += statusPanel.H
 	}
 
 	content.H = y - content.Y
@@ -114,13 +114,13 @@ func (pr *Prompt) SetPos(x, y int) {
 	x = pr.Content.X
 	y = pr.Content.Y
 	pr.QPanel.SetPos(x, y)
-	y += pr.QPanel.Rect().H
+	y += pr.QPanel.H
 	pr.Edit.SetPos(x, y)
-	y += pr.Edit.Rect().H
+	y += pr.Edit.H
 
 	if pr.HintPanel != nil {
 		pr.HintPanel.SetPos(x, y)
-		y += pr.HintPanel.Rect().H
+		y += pr.HintPanel.H
 	}
 	if pr.StatusPanel != nil {
 		y++
@@ -209,10 +209,10 @@ func (pr *Prompt) Size() Size {
 func (pr *Prompt) Rect() Rect {
 	outline := pr.Outline
 	if pr.GetHint() == "" {
-		outline.H -= pr.HintPanel.Rect().H
+		outline.H -= pr.HintPanel.H
 	}
 	if pr.GetStatus() == "" {
-		outline.H -= pr.StatusPanel.Rect().H
+		outline.H -= pr.StatusPanel.H
 		outline.H--
 	}
 	return outline
