@@ -48,26 +48,59 @@ func (buf *Buf) InBounds(x, y int) bool {
 }
 
 func (buf *Buf) InWriteBounds(x, y int) bool {
-	if y < 0 || x < 0 {
-		return false
+	if buf.InBounds(x, y) {
+		return true
 	}
 
-	// Allow x and y to be written one char outside buffer boundaries
-	// (ex. one line below bottom edge or one char past right edge)
-	// This allows adding to the buffer by writing to (x,y) 1 line/char
-	// beyond the boundaries.
-	nLines := len(buf.Lines)
-	if y > nLines {
-		return false
-	}
 	line := []rune(buf.Lines[y])
-	if y < nLines && x > len(line) {
-		return false
+	if x <= len(line) {
+		return true
 	}
-	//	if y == nLines && x > 0 {
-	//		return false
-	//	}
-	return true
+
+	return false
+}
+
+func (buf *Buf) PrevChar(bufPos Pos) Pos {
+	if !buf.InWriteBounds(bufPos.X, bufPos.Y) {
+		return bufPos
+	}
+
+	if bufPos.X > 0 {
+		bufPos.X--
+		return bufPos
+	}
+
+	if bufPos.Y > 0 {
+		bufPos.Y--
+		line := []rune(buf.Lines[bufPos.Y])
+		bufPos.X = len(line)
+		if bufPos.X < 0 {
+			bufPos.X = 0
+		}
+		return bufPos
+	}
+
+	return bufPos
+}
+func (buf *Buf) NextChar(bufPos Pos) Pos {
+	if !buf.InWriteBounds(bufPos.X, bufPos.Y) {
+		return bufPos
+	}
+
+	line := []rune(buf.Lines[bufPos.Y])
+	nline := len(line)
+	if bufPos.X < nline {
+		bufPos.X++
+		return bufPos
+	}
+
+	if bufPos.Y < len(buf.Lines) {
+		bufPos.Y++
+		bufPos.X = 0
+		return bufPos
+	}
+
+	return bufPos
 }
 
 func (buf *Buf) Clear() {

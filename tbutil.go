@@ -41,6 +41,10 @@ func print(s string, x, y int, attr TermAttr) {
 	}
 }
 
+func printCh(c rune, x, y int, attr TermAttr) {
+	tb.SetCell(x, y, c, attr.Fg, attr.Bg)
+}
+
 func clearRect(rect Rect, attr TermAttr) {
 	srow := strings.Repeat(" ", rect.W)
 	for y := rect.Y; y < rect.Y+rect.H; y++ {
@@ -82,4 +86,11 @@ func adjPos(outline, content Rect, x, y, borderWidth, paddingWidth int) (retOutl
 	retContent = NewRect(x+borderWidth+paddingWidth, y+borderWidth+paddingWidth, retOutline.W-borderWidth*2-paddingWidth*2, retOutline.H-borderWidth*2-paddingWidth*2)
 
 	return retOutline, retContent
+}
+
+func min(n1, n2 int) int {
+	if n1 < n2 {
+		return n1
+	}
+	return n2
 }

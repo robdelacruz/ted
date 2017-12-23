@@ -36,6 +36,12 @@ func main() {
 ted - A terminal text editor
 
 `)
+
+	err = editBuf.Load("sample.txt")
+	if err != nil {
+		panic(err)
+	}
+
 	editAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	statusAttr := TermAttr{tb.ColorBlack, tb.ColorWhite}
 	editW := NewEditView(0, 0, termW, termH, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, editBuf)
@@ -143,7 +149,7 @@ ted - A terminal text editor
 							promptW.Clear()
 							layout.SetFocusItem(editLI)
 							editW.ResetCur()
-							editW.SyncText()
+							editW.TraverseBuf(UpdateTS)
 							promptLI.Visible = false
 						}
 					}

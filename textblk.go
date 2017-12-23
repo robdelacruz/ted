@@ -2,7 +2,6 @@ package main
 
 import (
 	"strings"
-	"unicode"
 )
 
 type TextBlk struct {
@@ -74,36 +73,6 @@ func expandWhitespaceChar(c rune) string {
 		return strings.Repeat(" ", 4)
 	}
 	return string(c)
-}
-
-// Parse line to get sequence of words.
-// Each whitespace char is considered a single word.
-// Ex. "One two  three" => ["One", " ", "two", " ", " ", "three"]
-func parseWords(s string) []string {
-	var currentWord string
-	var words []string
-
-	for _, c := range s {
-		if unicode.IsSpace(c) {
-			// Add pending word
-			words = append(words, currentWord)
-
-			// Add single space word
-			words = append(words, expandWhitespaceChar(c))
-
-			currentWord = ""
-			continue
-		}
-
-		// Add char to pending word
-		currentWord += string(c)
-	}
-
-	if len(currentWord) > 0 {
-		words = append(words, currentWord)
-	}
-
-	return words
 }
 
 // Write buf line (buf[yBuf]) into blk.
