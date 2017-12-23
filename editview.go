@@ -9,8 +9,7 @@ import (
 )
 
 type EditView struct {
-	Content Rect
-	Outline Rect
+	Rect
 	*Buf
 	*TextBlk
 	Mode        EditViewMode
@@ -26,57 +25,27 @@ const (
 )
 
 func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr TermAttr, buf *Buf) *EditView {
-	outline, content := getRects(x, y, w, h, mode)
-	textBlk := NewTextBlk(content.W, 0)
-	if buf == nil {
-		buf = NewBuf()
-		buf.WriteLine("")
-	}
-
 	v := &EditView{}
-	v.Content = content
-	v.Outline = outline
+	v.Rect = NewRect(x, y, w, h)
 	v.Mode = mode
 	v.ContentAttr = contentAttr
 	v.StatusAttr = statusAttr
+
+	if mode&EditViewBorder != 0 {
+		w -= 2
+	}
+	textBlk := NewTextBlk(w, 0)
+	if buf == nil {
+		buf = NewBuf()
+		buf.SetText("")
+	}
+
 	v.Buf = buf
 	v.TextBlk = textBlk
-
 	v.SyncText()
 	return v
 }
 
-func getRects(x, y, w, h int, mode EditViewMode) (outline, content Rect) {
-	outline = NewRect(x, y, w, h)
-	content = outline
-	if mode&EditViewBorder != 0 {
-		content = NewRect(x+1, y+1, w-2, h-2)
-	}
-	if mode&EditViewStatusLine != 0 {
-		content.H--
-	}
-
-	return outline, content
-}
-
-func (v *EditView) Resize(x, y, w, h int) {
-	outline, content := getRects(x, y, w, h, v.Mode)
-	v.Content = content
-	v.Outline = outline
-
-	v.TextBlk.Resize(content.W, content.H)
-	v.SyncText()
-}
-
-func (v *EditView) Pos() Pos {
-	return Pos{v.Outline.X, v.Outline.Y}
-}
-func (v *EditView) Size() Size {
-	return Size{v.Outline.W, v.Outline.H}
-}
-func (v *EditView) Rect() Rect {
-	return NewRect(v.Outline.X, v.Outline.Y, v.Outline.W, v.Outline.H)
-}
 func (v *EditView) Text() string {
 	return v.Buf.Text()
 }
@@ -88,10 +57,10 @@ func min(n1, n2 int) int {
 }
 
 func (v *EditView) Draw() {
-	clearRect(v.Outline, v.ContentAttr)
+	clearRect(v.Rect, v.ContentAttr)
 	if v.Mode&EditViewBorder != 0 {
 		boxAttr := v.ContentAttr
-		drawBox(v.Outline.X, v.Outline.Y, v.Outline.W, v.Outline.H, boxAttr)
+		drawBox(v.Rect.X, v.Rect.Y, v.Rect.W, v.Rect.H, boxAttr)
 	}
 	v.drawText()
 
@@ -102,15 +71,27 @@ func (v *EditView) Draw() {
 	v.drawCursor()
 }
 
+func (v *EditView) contentRect() Rect {
+	rect := v.Rect
+	if v.Mode&EditViewBorder != 0 {
+		rect.X++
+		rect.Y++
+		rect.W -= 2
+		rect.H -= 2
+	}
+	return rect
+}
+
 func (v *EditView) drawText() {
-	v.TextBlk.PrintToArea(v.Content, v.ContentAttr)
+	v.TextBlk.PrintToArea(v.contentRect(), v.ContentAttr)
 }
 
 // Draw status line one row below content area.
 func (v *EditView) drawStatus() {
-	left := v.Content.X
-	width := v.Content.W
-	y := v.Content.Y + v.Content.H
+	rect := v.contentRect()
+	left := rect.X
+	width := rect.W
+	y := rect.Y + rect.H
 
 	// Clear status line first
 	clearStr := strings.Repeat(" ", width)
@@ -143,9 +124,12 @@ func (v *EditView) drawStatus() {
 }
 
 func (v *EditView) drawCursor() {
+	rect := v.contentRect()
+
 	x := v.Cur.X
 	y := v.Cur.Y - v.TextBlk.BlkYOffset
-	tb.SetCursor(v.Content.X+x, v.Content.Y+y)
+
+	tb.SetCursor(rect.X+x, rect.Y+y)
 }
 
 func (v *EditView) Clear() {
@@ -175,6 +159,8 @@ func (v *EditView) GetText() string {
 }
 
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
+	contentRect := v.contentRect()
+
 	var c rune
 	if e.Type == tb.EventKey {
 		switch e.Key {
@@ -199,18 +185,18 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		case tb.KeyCtrlE:
 			v.CurEOL()
 		case tb.KeyCtrlU:
-			v.TextBlk.BlkYOffset -= v.Content.H / 2
+			v.TextBlk.BlkYOffset -= contentRect.H / 2
 			if v.TextBlk.BlkYOffset < 0 {
 				v.TextBlk.BlkYOffset = 0
 			}
-			v.Cur.Y -= v.Content.H / 2
+			v.Cur.Y -= contentRect.H / 2
 			v.KeepBoundsCur()
 		case tb.KeyCtrlD:
-			v.TextBlk.BlkYOffset += v.Content.H / 2
+			v.TextBlk.BlkYOffset += contentRect.H / 2
 			if v.TextBlk.BlkYOffset > len(v.TextBlk.Text)-1 {
 				v.TextBlk.BlkYOffset = len(v.TextBlk.Text) - 1
 			}
-			v.Cur.Y += v.Content.H / 2
+			v.Cur.Y += contentRect.H / 2
 			v.KeepBoundsCur()
 		case tb.KeyCtrlV:
 			s := "12345\n678\n90\n"
@@ -315,7 +301,7 @@ func (v *EditView) AdjustScrollOffset() {
 	if v.Cur.Y-v.TextBlk.BlkYOffset < 0 {
 		v.TextBlk.BlkYOffset--
 	}
-	if v.Cur.Y-v.TextBlk.BlkYOffset > v.Content.H-1 {
+	if v.Cur.Y-v.TextBlk.BlkYOffset > v.contentRect().H-1 {
 		v.TextBlk.BlkYOffset++
 	}
 }
@@ -340,7 +326,7 @@ func (v *EditView) CurLeft() {
 		if v.Cur.Y > 0 {
 			v.Cur.Y--
 			// Go to rightmost char in prev row.
-			for x := v.Content.W - 1; x >= 0; x-- {
+			for x := v.contentRect().W - 1; x >= 0; x-- {
 				if v.TextBlk.Text[v.Cur.Y][x] != 0 {
 					v.Cur.X = x
 					break
@@ -354,8 +340,6 @@ func (v *EditView) CurLeft() {
 func (v *EditView) CurRight() {
 	v.Cur.X++
 
-	// Past right margin, wrap to next line if there's room.
-	//if v.Cur.X > v.Content.Width-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
 	if v.Cur.X > v.TextBlk.RowWidth-1 || (v.IsNilCur() && v.IsNilLeftCur()) {
 		if v.Cur.Y < len(v.TextBlk.Text)-1 {
 			v.Cur.X = 0
@@ -448,13 +432,4 @@ func (v *EditView) CurWordBack() {
 	}
 
 	v.AdjustScrollOffset()
-}
-
-func (v *EditView) SetPos(x, y int) {
-	var borderWidth int
-	if v.Mode&EditViewBorder != 0 {
-		borderWidth = 1
-	}
-	paddingWidth := 0
-	v.Outline, v.Content = adjPos(v.Outline, v.Content, x, y, borderWidth, paddingWidth)
 }

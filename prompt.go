@@ -7,15 +7,14 @@ import (
 // Panel prompt for text, interactive textual entry using textview.
 
 type Prompt struct {
+	Rect
 	QPanel      *Panel
 	Edit        *EditView
 	HintPanel   *Panel
 	StatusPanel *Panel
 
-	Outline Rect
-	Content Rect
-	Mode    PromptMode
-	Opts    *PromptOptions
+	Mode PromptMode
+	Opts *PromptOptions
 }
 
 type PromptMode uint
@@ -46,12 +45,7 @@ type PromptOptions struct {
 }
 
 func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
-	outline := NewRect(x, y, w, 0)
-	var borderWidth int
-	if mode&PromptBorder != 0 {
-		borderWidth = 1
-	}
-	content := NewRect(x+borderWidth+opts.ContentPadding, y+borderWidth+opts.ContentPadding, w-borderWidth*2-opts.ContentPadding*2, 0)
+	outlineRect := NewRect(x, y, w, 0)
 
 	if opts.QHeight == 0 {
 		opts.QHeight = 1
@@ -60,41 +54,40 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 		opts.AnsHeight = 1
 	}
 
-	x = content.X
-	y = content.Y
-	w = content.W
+	if mode&PromptBorder != 0 {
+		w -= 2
+	}
+	w -= opts.ContentPadding * 2
+
+	offsX := 0
+	offsY := 0
 
 	qOpts := PanelOptions{opts.QText, opts.QAttr, 0}
-	qPanel := NewPanel(x, y, w, opts.QHeight, qOpts)
+	qPanel := NewPanel(offsX, offsY, w, opts.QHeight, qOpts)
+	offsY += qPanel.H
 
-	y += qPanel.H
-	edit := NewEditView(x, y, w, opts.AnsHeight, 0, opts.AnsAttr, BWAttr, nil)
-
-	y += edit.H
+	edit := NewEditView(offsX, offsY, w, opts.AnsHeight, 0, opts.AnsAttr, BWAttr, nil)
+	offsY += edit.H
 
 	var hintPanel *Panel
 	if opts.HintHeight > 0 {
 		hintOpts := PanelOptions{opts.HintText, opts.HintAttr, 0}
-		hintPanel = NewPanel(x, y, w, opts.HintHeight, hintOpts)
+		hintPanel = NewPanel(offsX, offsY, w, opts.HintHeight, hintOpts)
 
-		y += hintPanel.H
+		offsY += hintPanel.H
 	}
 
 	var statusPanel *Panel
 	if opts.StatusHeight > 0 {
-		y++
+		offsY++
 		statusOpts := PanelOptions{opts.StatusText, opts.StatusAttr, 0}
-		statusPanel = NewPanel(x, y, w, opts.StatusHeight, statusOpts)
+		statusPanel = NewPanel(offsX, offsY, w, opts.StatusHeight, statusOpts)
 
-		y += statusPanel.H
+		offsY += statusPanel.H
 	}
 
-	content.H = y - content.Y
-	outline.H = content.H + borderWidth*2 + opts.ContentPadding*2
-
 	pr := &Prompt{}
-	pr.Outline = outline
-	pr.Content = content
+	pr.Rect = outlineRect
 	pr.Mode = mode
 	pr.Opts = opts
 	pr.QPanel = qPanel
@@ -102,30 +95,6 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 	pr.HintPanel = hintPanel
 	pr.StatusPanel = statusPanel
 	return pr
-}
-
-func (pr *Prompt) SetPos(x, y int) {
-	var borderWidth int
-	if pr.Mode&PromptBorder != 0 {
-		borderWidth = 1
-	}
-	pr.Outline, pr.Content = adjPos(pr.Outline, pr.Content, x, y, borderWidth, pr.Opts.ContentPadding)
-
-	x = pr.Content.X
-	y = pr.Content.Y
-	pr.QPanel.SetPos(x, y)
-	y += pr.QPanel.H
-	pr.Edit.SetPos(x, y)
-	y += pr.Edit.H
-
-	if pr.HintPanel != nil {
-		pr.HintPanel.SetPos(x, y)
-		y += pr.HintPanel.H
-	}
-	if pr.StatusPanel != nil {
-		y++
-		pr.StatusPanel.SetPos(x, y)
-	}
 }
 
 func (pr *Prompt) SetPrompt(s string) {
@@ -169,21 +138,87 @@ func (pr *Prompt) Clear() {
 	pr.SetStatus("")
 }
 
-func (pr *Prompt) Draw() {
-	outline := pr.Rect()
+func (pr *Prompt) contentRect() Rect {
+	rect := pr.Rect
 
-	clearRect(outline, pr.Opts.QAttr)
-	if pr.Mode&PromptBorder != 0 {
-		drawBox(outline.X, outline.Y, outline.W, outline.H, BWAttr)
+	rect.H = pr.QPanel.H + pr.Edit.H
+	if pr.HintPanel != nil && pr.GetHint() != "" {
+		rect.H += pr.HintPanel.H
+	}
+	if pr.StatusPanel != nil && pr.GetStatus() != "" {
+		rect.H += pr.StatusPanel.H
 	}
 
+	if pr.Mode&PromptBorder != 0 {
+		rect.X++
+		rect.Y++
+		rect.W -= 2
+	}
+
+	rect.X += pr.Opts.ContentPadding
+	rect.Y += pr.Opts.ContentPadding
+	rect.W -= pr.Opts.ContentPadding * 2
+
+	return rect
+}
+
+func (pr *Prompt) outlineRect() Rect {
+	rect := pr.Rect
+
+	rect.H = pr.contentRect().H
+	if pr.Mode&PromptBorder != 0 {
+		rect.H += 2
+	}
+	rect.H += pr.Opts.ContentPadding * 2
+
+	return rect
+}
+
+func (pr *Prompt) Height() int {
+	return pr.outlineRect().H
+}
+
+func (pr *Prompt) Draw() {
+	clearRect(pr.outlineRect(), pr.Opts.QAttr)
+
+	rect := pr.contentRect()
+
+	// Save offset positions of child widgets,
+	// to be restored after drawing.
+	xQPanel, yQPanel := pr.QPanel.X, pr.QPanel.Y
+	xEdit, yEdit := pr.Edit.X, pr.Edit.Y
+	xHintPanel, yHintPanel := pr.HintPanel.X, pr.HintPanel.Y
+	xStatusPanel, yStatusPanel := pr.StatusPanel.X, pr.StatusPanel.Y
+
+	pr.QPanel.X += rect.X
+	pr.QPanel.Y += rect.Y
 	pr.QPanel.Draw()
+
+	pr.Edit.X += rect.X
+	pr.Edit.Y += rect.Y
 	pr.Edit.Draw()
+
 	if pr.HintPanel != nil && pr.GetHint() != "" {
+		pr.HintPanel.X += rect.X
+		pr.HintPanel.Y += rect.Y
 		pr.HintPanel.Draw()
 	}
 	if pr.StatusPanel != nil && pr.GetStatus() != "" {
+		pr.StatusPanel.X += rect.X
+		pr.StatusPanel.Y += rect.Y
 		pr.StatusPanel.Draw()
+	}
+
+	// Restore offset positions of child widgets.
+	pr.QPanel.X, pr.QPanel.Y = xQPanel, yQPanel
+	pr.Edit.X, pr.Edit.Y = xEdit, yEdit
+	pr.HintPanel.X, pr.HintPanel.Y = xHintPanel, yHintPanel
+	pr.StatusPanel.X, pr.StatusPanel.Y = xStatusPanel, yStatusPanel
+
+	if pr.Mode&PromptBorder != 0 {
+		outlineRect := pr.outlineRect()
+		drawBox(outlineRect.X, outlineRect.Y, outlineRect.W, outlineRect.H, BWAttr)
+		_log.Printf("outlineRect = %s\n", outlineRect)
 	}
 }
 
@@ -198,22 +233,4 @@ func (pr *Prompt) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	}
 
 	return pr.Edit.HandleEvent(e)
-}
-
-func (pr *Prompt) Pos() Pos {
-	return Pos{pr.Outline.X, pr.Outline.Y}
-}
-func (pr *Prompt) Size() Size {
-	return Size{pr.Outline.W, pr.Outline.H}
-}
-func (pr *Prompt) Rect() Rect {
-	outline := pr.Outline
-	if pr.GetHint() == "" {
-		outline.H -= pr.HintPanel.H
-	}
-	if pr.GetStatus() == "" {
-		outline.H -= pr.StatusPanel.H
-		outline.H--
-	}
-	return outline
 }

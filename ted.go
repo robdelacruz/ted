@@ -59,7 +59,8 @@ ted - A terminal text editor
 	}
 	promptWWidth := termW / 2
 	promptW := NewPrompt(0, 0, promptWWidth, PromptBorder, &promptOpts)
-	promptW.SetPos(termW/2-promptWWidth/2, termH/2-promptW.Rect().H)
+	promptW.X = termW/2 - promptWWidth/2
+	promptW.Y = termH/2 - promptW.Height()
 	promptLI := NewLayoutItem(promptW, false)
 
 	// About panel
@@ -96,6 +97,9 @@ ted - A terminal text editor
 				promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
 				promptW.SetStatus("")
 
+				promptW.X = termW/2 - promptWWidth/2
+				promptW.Y = termH/2 - promptW.Height()
+
 				promptLI.Visible = true
 				layout.SetFocusItem(promptLI)
 			}
@@ -105,6 +109,9 @@ ted - A terminal text editor
 				promptW.SetPrompt("Save file:")
 				promptW.SetHint("<ENTER> to Save, <ESC> to Cancel")
 				promptW.SetStatus("")
+
+				promptW.X = termW/2 - promptWWidth/2
+				promptW.Y = termH/2 - promptW.Height()
 
 				file := editBuf.Name
 				promptW.SetEdit(file)

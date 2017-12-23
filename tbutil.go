@@ -18,6 +18,9 @@ var BWAttr TermAttr
 func NewRect(x, y, w, h int) Rect {
 	return Rect{x, y, w, h}
 }
+func (rect Rect) String() string {
+	return fmt.Sprintf("x: %d, y: %d, w: %d, h %d", rect.X, rect.Y, rect.W, rect.H)
+}
 
 func (pos *Pos) String() string {
 	return fmt.Sprintf("%d,%d", pos.X, pos.Y)

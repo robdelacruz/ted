@@ -31,6 +31,11 @@ func (l *Label) SetText(s string) {
 	l.Text = s
 }
 
+func (l *Label) SetPos(x, y int) {
+	l.X = x
+	l.Y = y
+}
+
 func (l *Label) Draw() {
 	x, y := l.X, l.Y
 

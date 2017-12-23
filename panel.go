@@ -5,8 +5,7 @@ import (
 )
 
 type Panel struct {
-	Content Rect
-	Outline Rect
+	Rect
 	*Buf
 	*TextBlk
 	Opts PanelOptions
@@ -25,36 +24,43 @@ type PanelOptions struct {
 }
 
 func NewPanel(x, y, w, h int, opts PanelOptions) *Panel {
-	outline := NewRect(x, y, w, h)
-	content := outline
-
-	if opts.Mode&PanelBorder != 0 {
-		content = NewRect(x+1, y+1, w-2, h-2)
-	}
-
 	p := &Panel{}
-	p.Outline = outline
-	p.Content = content
-	p.Buf = NewBuf()
-	p.TextBlk = NewTextBlk(content.W, 0)
+	p.Rect = NewRect(x, y, w, h)
 	p.Opts = opts
-
+	p.Buf = NewBuf()
 	p.Buf.SetText(opts.Text)
+	if opts.Mode&PanelBorder != 0 {
+		w -= 2
+	}
+	p.TextBlk = NewTextBlk(w, 0)
 	p.SyncText()
 
 	return p
 }
 
+func (p *Panel) SetPos(x, y int) {
+	p.X = x
+	p.Y = y
+}
+
 func (p *Panel) Draw() {
-	clearRect(p.Outline, p.Opts.Attr)
+	clearRect(p.Rect, p.Opts.Attr)
 	if p.Opts.Mode&PanelBorder != 0 {
-		drawBox(p.Outline.X, p.Outline.Y, p.Outline.W, p.Outline.H, p.Opts.Attr)
+		drawBox(p.Rect.X, p.Rect.Y, p.Rect.W, p.Rect.H, p.Opts.Attr)
 	}
 
 	p.drawText()
 }
 func (p *Panel) drawText() {
-	p.TextBlk.PrintToArea(p.Content, p.Opts.Attr)
+	rect := p.Rect
+	if p.Opts.Mode&PanelBorder != 0 {
+		rect.X++
+		rect.Y++
+		rect.W -= 2
+		rect.H -= 2
+	}
+
+	p.TextBlk.PrintToArea(rect, p.Opts.Attr)
 }
 
 func (p *Panel) SetText(s string) {
@@ -70,13 +76,4 @@ func (p *Panel) SyncText() {
 
 func (p *Panel) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	return p, WidgetEventNone
-}
-
-func (p *Panel) SetPos(x, y int) {
-	var borderWidth int
-	if p.Opts.Mode&PanelBorder != 0 {
-		borderWidth = 1
-	}
-	paddingWidth := 0
-	p.Outline, p.Content = adjPos(p.Outline, p.Content, x, y, borderWidth, paddingWidth)
 }
