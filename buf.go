@@ -60,7 +60,7 @@ func (buf *Buf) InWriteBounds(x, y int) bool {
 	return false
 }
 
-func (buf *Buf) PrevChar(bufPos Pos) Pos {
+func (buf *Buf) PrevPos(bufPos Pos) Pos {
 	if !buf.InWriteBounds(bufPos.X, bufPos.Y) {
 		return bufPos
 	}
@@ -82,7 +82,7 @@ func (buf *Buf) PrevChar(bufPos Pos) Pos {
 
 	return bufPos
 }
-func (buf *Buf) NextChar(bufPos Pos) Pos {
+func (buf *Buf) NextPos(bufPos Pos) Pos {
 	if !buf.InWriteBounds(bufPos.X, bufPos.Y) {
 		return bufPos
 	}
@@ -100,6 +100,19 @@ func (buf *Buf) NextChar(bufPos Pos) Pos {
 		return bufPos
 	}
 
+	return bufPos
+}
+
+func (buf *Buf) BOLPos(bufPos Pos) Pos {
+	bufPos.X = 0
+	return bufPos
+}
+
+func (buf *Buf) EOLPos(bufPos Pos) Pos {
+	line := []rune(buf.Lines[bufPos.Y])
+	nline := len(line)
+
+	bufPos.X = nline
 	return bufPos
 }
 
