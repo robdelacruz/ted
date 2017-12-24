@@ -280,7 +280,9 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		case tb.KeyArrowRight:
 			v.BufPos = v.Buf.NextPos(v.BufPos)
 		case tb.KeyArrowUp:
+			v.BufPos = v.Buf.UpPos(v.BufPos)
 		case tb.KeyArrowDown:
+			v.BufPos = v.Buf.DownPos(v.BufPos)
 		case tb.KeyCtrlN:
 			fallthrough
 		case tb.KeyCtrlF:

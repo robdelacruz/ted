@@ -60,60 +60,103 @@ func (buf *Buf) InWriteBounds(x, y int) bool {
 	return false
 }
 
-func (buf *Buf) PrevPos(bufPos Pos) Pos {
-	if !buf.InWriteBounds(bufPos.X, bufPos.Y) {
-		return bufPos
+func (buf *Buf) NumLines() int {
+	return len(buf.Lines)
+}
+
+func (buf *Buf) PosLine(y int) ([]rune, int) {
+	nLines := len(buf.Lines)
+	if y >= 0 && y < nLines {
+		line := []rune(buf.Lines[y])
+		return line, len(line)
+	}
+	return []rune{}, 0
+}
+
+func (buf *Buf) PrevPos(pos Pos) Pos {
+	if !buf.InWriteBounds(pos.X, pos.Y) {
+		return pos
 	}
 
-	if bufPos.X > 0 {
-		bufPos.X--
-		return bufPos
+	if pos.X > 0 {
+		pos.X--
+		return pos
 	}
 
-	if bufPos.Y > 0 {
-		bufPos.Y--
-		line := []rune(buf.Lines[bufPos.Y])
-		bufPos.X = len(line)
-		if bufPos.X < 0 {
-			bufPos.X = 0
+	if pos.Y > 0 {
+		pos.Y--
+		_, nline := buf.PosLine(pos.Y)
+		pos.X = nline
+		if pos.X < 0 {
+			pos.X = 0
 		}
-		return bufPos
+		return pos
 	}
 
-	return bufPos
+	return pos
 }
-func (buf *Buf) NextPos(bufPos Pos) Pos {
-	if !buf.InWriteBounds(bufPos.X, bufPos.Y) {
-		return bufPos
+func (buf *Buf) NextPos(pos Pos) Pos {
+	if !buf.InWriteBounds(pos.X, pos.Y) {
+		return pos
 	}
 
-	line := []rune(buf.Lines[bufPos.Y])
-	nline := len(line)
-	if bufPos.X < nline {
-		bufPos.X++
-		return bufPos
+	_, nline := buf.PosLine(pos.Y)
+	if pos.X < nline {
+		pos.X++
+		return pos
 	}
 
-	if bufPos.Y < len(buf.Lines) {
-		bufPos.Y++
-		bufPos.X = 0
-		return bufPos
+	if pos.Y < buf.NumLines() {
+		pos.Y++
+		pos.X = 0
+		return pos
 	}
 
-	return bufPos
-}
-
-func (buf *Buf) BOLPos(bufPos Pos) Pos {
-	bufPos.X = 0
-	return bufPos
+	return pos
 }
 
-func (buf *Buf) EOLPos(bufPos Pos) Pos {
-	line := []rune(buf.Lines[bufPos.Y])
-	nline := len(line)
+func (buf *Buf) BOLPos(pos Pos) Pos {
+	pos.X = 0
+	return pos
+}
 
-	bufPos.X = nline
-	return bufPos
+func (buf *Buf) EOLPos(pos Pos) Pos {
+	_, nline := buf.PosLine(pos.Y)
+
+	pos.X = nline
+	return pos
+}
+
+func (buf *Buf) UpPos(pos Pos) Pos {
+	if pos.Y <= 0 {
+		return pos
+	}
+
+	pos.Y--
+	_, nline := buf.PosLine(pos.Y)
+	if nline == 0 {
+		pos.X = 0
+	} else if pos.X > nline-1 {
+		pos.X = nline - 1
+	}
+
+	return pos
+}
+
+func (buf *Buf) DownPos(pos Pos) Pos {
+	if pos.Y >= buf.NumLines()-1 {
+		return pos
+	}
+
+	pos.Y++
+	_, nline := buf.PosLine(pos.Y)
+	if nline == 0 {
+		pos.X = 0
+	} else if pos.X > nline-1 {
+		pos.X = nline - 1
+	}
+
+	return pos
 }
 
 func (buf *Buf) Clear() {
