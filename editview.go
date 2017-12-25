@@ -27,13 +27,6 @@ const (
 	EditViewStatusLine
 )
 
-type TraverseBufOp uint
-
-const (
-	UpdateTS TraverseBufOp = 1 << iota
-	UpdateTSPos
-)
-
 func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr TermAttr, buf *Buf) *EditView {
 	v := &EditView{}
 	v.Rect = NewRect(x, y, w, h)
@@ -49,7 +42,7 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 		buf.SetText("")
 	}
 	v.Buf = buf
-	v.TraverseBuf(UpdateTS)
+	v.SyncText(v.Ts, nil)
 
 	return v
 }
@@ -84,84 +77,55 @@ func parseWords(s string) []string {
 	return words
 }
 
-func (v *EditView) updateTsPos(yBuf, xBufWordStart, xBufWordEnd, xTs, yTs int) bool {
-	if v.BufPos.Y == yBuf &&
-		v.BufPos.X >= xBufWordStart && v.BufPos.X < xBufWordEnd {
-		// Update tsPos corresponding to bufPos.
-		v.TsPos.Y = yTs
-		v.TsPos.X = xTs - (xBufWordEnd - v.BufPos.X)
-		return true
-	}
-
-	return false
-}
-
-func (v *EditView) layoutLine(op TraverseBufOp, yBuf int, ts *TextSurface, yTs int) int {
-	var fSet bool
-	xTs := 0
-	xBuf := 0
-
-	bufLine := v.Buf.Lines[yBuf]
-	words := parseWords(bufLine)
-
-	for _, word := range words {
-		lenWord := len([]rune(word))
-		// word can't fit in remaining line, add to next line.
-		if xTs+lenWord > ts.W {
-			yTs++
-			xTs = 0
-			if op&UpdateTS != 0 {
-				ts.WriteString(word, xTs, yTs)
-			}
-
-			xTs = lenWord
-			xBuf += lenWord
-
-			if op&UpdateTSPos != 0 && !fSet {
-				fSet = v.updateTsPos(yBuf, xBuf-lenWord, xBuf, xTs, yTs)
-			}
-			continue
-		}
-
-		// add word to remaining line.
-		if op&UpdateTS != 0 {
-			ts.WriteString(word, xTs, yTs)
-		}
-
-		xTs += lenWord
-		xBuf += lenWord
-
-		if op&UpdateTSPos != 0 && !fSet {
-			fSet = v.updateTsPos(yBuf, xBuf-lenWord, xBuf, xTs, yTs)
-		}
-	}
-
-	// bufPos falls outside line bounds
-	if op&UpdateTSPos != 0 && !fSet && v.BufPos.Y == yBuf {
-		v.TsPos.Y = yTs
-
-		if v.BufPos.X == 0 {
-			v.TsPos.X = 0
-		} else {
-			v.TsPos.X = xTs
-		}
-		fSet = true
-	}
-
-	return yTs + 1
-}
-
-func (v *EditView) TraverseBuf(op TraverseBufOp) {
-	if op&UpdateTS != 0 {
-		v.Ts.Clear(0)
-	}
-
-	yBuf := v.YBufOffset
+func (v *EditView) SyncText(pTs *TextSurface, pTsPos *Pos) {
 	yTs := 0
+	xBuf, yBuf := 0, v.YBufOffset
+
+	maxlenWrapline := v.Ts.W
+	if pTs != nil {
+		maxlenWrapline = pTs.W
+	}
+
+	var fTsSet bool
+
+	if pTs != nil {
+		pTs.Clear(0)
+	}
+
+	cbWord := func(w string) {
+	}
+
+	cbWrapLine := func(wrapline string) {
+		// Write new wrapline to display.
+		if pTs != nil {
+			pTs.WriteString(wrapline, 0, yTs)
+		}
+
+		lenWrapline := len([]rune(wrapline))
+
+		// Update ts pos if bufpos in this wrapline.
+		if pTsPos != nil && !fTsSet && v.BufPos.Y == yBuf {
+			if v.BufPos.X >= xBuf && v.BufPos.X <= (xBuf+lenWrapline) {
+				pTsPos.X = v.BufPos.X - xBuf
+				pTsPos.Y = yTs
+				fTsSet = true
+			} else if v.BufPos.X == 0 {
+				pTsPos.X = 0
+				pTsPos.Y = yTs
+				fTsSet = true
+			}
+		}
+
+		yTs++
+		xBuf += lenWrapline
+	}
 
 	for yBuf < len(v.Buf.Lines) {
-		yTs = v.layoutLine(op, yBuf, v.Ts, yTs)
+		bufLine := v.Buf.Lines[yBuf]
+
+		processLine(bufLine, maxlenWrapline, cbWord, cbWrapLine)
 		yBuf++
+		xBuf = 0
 	}
 }
 
@@ -245,15 +209,14 @@ func (v *EditView) drawStatus() {
 }
 
 func (v *EditView) drawCursor() {
-	v.TraverseBuf(UpdateTSPos)
-
+	v.SyncText(nil, &v.TsPos)
 	rect := v.contentRect()
 	tb.SetCursor(rect.X+v.TsPos.X, rect.Y+v.TsPos.Y)
 }
 
 func (v *EditView) Clear() {
 	v.Buf.Clear()
-	v.TraverseBuf(UpdateTS)
+	v.SyncText(v.Ts, nil)
 	v.ResetCur()
 }
 func (v *EditView) ResetCur() {
@@ -263,7 +226,7 @@ func (v *EditView) ResetCur() {
 
 func (v *EditView) SetText(s string) {
 	v.Buf.SetText(s)
-	v.TraverseBuf(UpdateTS)
+	v.SyncText(v.Ts, nil)
 	v.ResetCur()
 }
 

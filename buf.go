@@ -36,24 +36,23 @@ func (buf *Buf) InBounds(x, y int) bool {
 		return false
 	}
 
-	nLines := len(buf.Lines)
-	if y > nLines-1 {
+	if y > buf.NumLines()-1 {
 		return false
 	}
-	line := []rune(buf.Lines[y])
-	if x > len(line)-1 {
+	_, nline := buf.PosLine(y)
+	if x > nline-1 {
 		return false
 	}
 	return true
 }
 
 func (buf *Buf) InWriteBounds(x, y int) bool {
-	if buf.InBounds(x, y) {
-		return true
+	if y > buf.NumLines()-1 {
+		return false
 	}
 
-	line := []rune(buf.Lines[y])
-	if x <= len(line) {
+	_, nline := buf.PosLine(y)
+	if x <= nline {
 		return true
 	}
 
@@ -106,7 +105,7 @@ func (buf *Buf) NextPos(pos Pos) Pos {
 		return pos
 	}
 
-	if pos.Y < buf.NumLines() {
+	if pos.Y < buf.NumLines()-1 {
 		pos.Y++
 		pos.X = 0
 		return pos
@@ -411,4 +410,44 @@ func (buf *Buf) MergeLines(y1, y2 int) {
 
 	buf.Lines[y1] += buf.Lines[y2]
 	buf.DelLine(y2)
+}
+
+func processLine(line string, maxlenWrapLine int, cbWord func(word string), cbWrapLine func(wrapline string)) {
+	if len(line) == 0 {
+		cbWrapLine(line)
+		return
+	}
+
+	xWL := 0 // x in wrapline
+
+	var bWL bytes.Buffer // current wrapline
+
+	words := parseWords(line)
+	for _, w := range words {
+		cbWord(w)
+
+		// word can't fit in remaining wrapline, add to next wrapline.
+		lenW := len([]rune(w))
+		if xWL+lenW > maxlenWrapLine {
+			cbWrapLine(bWL.String())
+
+			// Start new wrapline
+			xWL = 0
+			bWL.Reset()
+			bWL.WriteString(w)
+			xWL += lenW
+
+			continue
+		}
+
+		// add word to remaining wrapline.
+		bWL.WriteString(w)
+		xWL += lenW
+	}
+
+	// Process any leftover wrapline.
+	remWL := bWL.String()
+	if len(remWL) > 0 {
+		cbWrapLine(remWL)
+	}
 }
