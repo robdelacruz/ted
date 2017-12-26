@@ -149,7 +149,7 @@ ted - A terminal text editor
 							promptW.Clear()
 							layout.SetFocusItem(editLI)
 							editW.ResetCur()
-							editW.SyncText(editW.Ts, nil)
+							editW.SyncBufText()
 							promptLI.Visible = false
 						}
 					}

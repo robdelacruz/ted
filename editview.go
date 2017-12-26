@@ -16,7 +16,6 @@ type EditView struct {
 	ContentAttr TermAttr
 	StatusAttr  TermAttr
 	BufPos      Pos
-	TsPos       Pos
 	YBufOffset  int
 }
 
@@ -42,7 +41,7 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 		buf.SetText("")
 	}
 	v.Buf = buf
-	v.SyncText(v.Ts, nil)
+	v.SyncBufText()
 
 	return v
 }
@@ -77,7 +76,20 @@ func parseWords(s string) []string {
 	return words
 }
 
-func (v *EditView) SyncText(pTs *TextSurface, pTsPos *Pos) {
+func (v *EditView) SyncBufText() {
+	v.syncWithBuf(v.Ts, nil)
+}
+func (v *EditView) bufPosToTsPos() Pos {
+	var tsPos Pos
+	v.syncWithBuf(nil, &tsPos)
+	return tsPos
+}
+func (v *EditView) SyncBufTextSurfacePos() Pos {
+	var tsPos Pos
+	v.syncWithBuf(v.Ts, &tsPos)
+	return tsPos
+}
+func (v *EditView) syncWithBuf(pTs *TextSurface, pTsPos *Pos) {
 	yTs := 0
 	xBuf, yBuf := 0, v.YBufOffset
 
@@ -209,14 +221,14 @@ func (v *EditView) drawStatus() {
 }
 
 func (v *EditView) drawCursor() {
-	v.SyncText(nil, &v.TsPos)
+	tsPos := v.bufPosToTsPos()
 	rect := v.contentRect()
-	tb.SetCursor(rect.X+v.TsPos.X, rect.Y+v.TsPos.Y)
+	tb.SetCursor(rect.X+tsPos.X, rect.Y+tsPos.Y)
 }
 
 func (v *EditView) Clear() {
 	v.Buf.Clear()
-	v.SyncText(v.Ts, nil)
+	v.SyncBufText()
 	v.ResetCur()
 }
 func (v *EditView) ResetCur() {
@@ -226,7 +238,7 @@ func (v *EditView) ResetCur() {
 
 func (v *EditView) SetText(s string) {
 	v.Buf.SetText(s)
-	v.SyncText(v.Ts, nil)
+	v.SyncBufText()
 	v.ResetCur()
 }
 
@@ -235,6 +247,7 @@ func (v *EditView) GetText() string {
 }
 
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
+	var bufChanged bool
 	var c rune
 	if e.Type == tb.EventKey {
 		switch e.Key {
@@ -260,10 +273,16 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		case tb.KeyCtrlD:
 		case tb.KeyCtrlV:
 		case tb.KeyEnter:
+			v.BufPos = v.Buf.InsEOL(v.BufPos)
+			bufChanged = true
 		case tb.KeyDelete:
+			v.BufPos = v.Buf.DelChar(v.BufPos)
+			bufChanged = true
 		case tb.KeyBackspace:
 			fallthrough
 		case tb.KeyBackspace2:
+			v.BufPos = v.Buf.DelPrevChar(v.BufPos)
+			bufChanged = true
 		case tb.KeySpace:
 			c = ' '
 		case 0:
@@ -273,6 +292,12 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	// Char entered
 	if c != 0 {
+		v.BufPos = v.Buf.InsChar(v.BufPos, c)
+		bufChanged = true
+	}
+
+	if bufChanged {
+		v.SyncBufText()
 	}
 
 	return v, WidgetEventNone

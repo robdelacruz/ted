@@ -31,28 +31,28 @@ func (buf *Buf) Text() string {
 	return b.String()
 }
 
-func (buf *Buf) InBounds(x, y int) bool {
-	if y < 0 || x < 0 {
+func (buf *Buf) InBounds(pos Pos) bool {
+	if pos.Y < 0 || pos.X < 0 {
 		return false
 	}
 
-	if y > buf.NumLines()-1 {
+	if pos.Y > buf.NumLines()-1 {
 		return false
 	}
-	_, nline := buf.PosLine(y)
-	if x > nline-1 {
+	_, nline := buf.PosLine(pos.Y)
+	if pos.X > nline-1 {
 		return false
 	}
 	return true
 }
 
-func (buf *Buf) InWriteBounds(x, y int) bool {
-	if y > buf.NumLines()-1 {
+func (buf *Buf) InWriteBounds(pos Pos) bool {
+	if pos.Y > buf.NumLines()-1 {
 		return false
 	}
 
-	_, nline := buf.PosLine(y)
-	if x <= nline {
+	_, nline := buf.PosLine(pos.Y)
+	if pos.X <= nline {
 		return true
 	}
 
@@ -73,7 +73,7 @@ func (buf *Buf) PosLine(y int) ([]rune, int) {
 }
 
 func (buf *Buf) PrevPos(pos Pos) Pos {
-	if !buf.InWriteBounds(pos.X, pos.Y) {
+	if !buf.InWriteBounds(pos) {
 		return pos
 	}
 
@@ -95,7 +95,7 @@ func (buf *Buf) PrevPos(pos Pos) Pos {
 	return pos
 }
 func (buf *Buf) NextPos(pos Pos) Pos {
-	if !buf.InWriteBounds(pos.X, pos.Y) {
+	if !buf.InWriteBounds(pos) {
 		return pos
 	}
 
@@ -230,28 +230,29 @@ func (buf *Buf) ClearDirty() {
 	buf.Dirty = false
 }
 
-func (buf *Buf) InsEOL(x, y int) (bufPos Pos) {
-	if !buf.InWriteBounds(x, y) {
-		return Pos{x, y}
+func (buf *Buf) InsEOL(pos Pos) Pos {
+	if !buf.InWriteBounds(pos) {
+		return pos
 	}
 
 	buf.SetDirty()
 
-	nLines := len(buf.Lines)
-	if y == nLines {
+	x, y := pos.X, pos.Y
+
+	if y == buf.NumLines() {
 		buf.WriteLine("")
 		return Pos{x, y + 1}
 	}
 
-	line := []rune(buf.Lines[y])
+	line, nline := buf.PosLine(y)
 	var leftPart, rightPart []rune
 	leftPart = line[:x]
-	if x <= len(line)-1 {
+	if x <= nline-1 {
 		rightPart = line[x:]
 	}
 
 	buf.Lines = append(buf.Lines, "")
-	if y < len(buf.Lines)-2 {
+	if y < buf.NumLines()-2 {
 		copy(buf.Lines[y+2:], buf.Lines[y+1:])
 	}
 
@@ -260,24 +261,25 @@ func (buf *Buf) InsEOL(x, y int) (bufPos Pos) {
 	return Pos{0, y + 1}
 }
 
-func (buf *Buf) InsChar(c rune, x, y int) (bufPos Pos) {
-	if !buf.InWriteBounds(x, y) {
-		return Pos{x, y}
+func (buf *Buf) InsChar(pos Pos, c rune) Pos {
+	if !buf.InWriteBounds(pos) {
+		return pos
 	}
 
 	buf.SetDirty()
 
+	x, y := pos.X, pos.Y
+
 	// Insert new line with char.
-	nLines := len(buf.Lines)
-	if y == nLines {
+	if y == buf.NumLines() {
 		buf.WriteLine(string(c))
 		return Pos{x + 1, y}
 	}
 
 	// Replace existing line, insert char.
-	line := []rune(buf.Lines[y])
+	line, nline := buf.PosLine(y)
 	line = append(line, 0)
-	if x < len(line)-1 {
+	if x < nline-1 {
 		copy(line[x+1:], line[x:])
 	}
 	line[x] = c
@@ -286,23 +288,24 @@ func (buf *Buf) InsChar(c rune, x, y int) (bufPos Pos) {
 	return Pos{x + 1, y}
 }
 
-func (buf *Buf) InsStr(s string, x, y int) int {
-	if !buf.InWriteBounds(x, y) {
-		return x
+func (buf *Buf) InsStr(pos Pos, s string) Pos {
+	if !buf.InWriteBounds(pos) {
+		return pos
 	}
 
 	buf.SetDirty()
 
+	x, y := pos.X, pos.Y
+
 	// Insert new line with string.
-	nLines := len(buf.Lines)
-	if y == nLines {
+	if y == buf.NumLines() {
 		buf.WriteLine(s)
-		return x
+		return pos
 	}
 
 	// Replace existing line, insert string.
 	var b bytes.Buffer
-	line := []rune(buf.Lines[y])
+	line, _ := buf.PosLine(y)
 	leftPart := line[:x]
 	rightPart := line[x:]
 
@@ -312,48 +315,50 @@ func (buf *Buf) InsStr(s string, x, y int) int {
 
 	buf.Lines[y] = b.String()
 
-	return x + runeslen(s)
+	return Pos{x + runeslen(s), y}
 }
 
-func (buf *Buf) InsText(s string, x, y int) (bufPos Pos) {
+func (buf *Buf) InsText(pos Pos, s string) Pos {
 	b := bytes.NewBufferString(s)
 	scanner := bufio.NewScanner(b)
 
-	xBuf, yBuf := x, y
+	bufPos := pos
 	for scanner.Scan() {
 		sline := scanner.Text()
-		xBuf = buf.InsStr(sline, xBuf, yBuf)
-		buf.InsEOL(xBuf, yBuf)
+		bufPos = buf.InsStr(bufPos, sline)
+		buf.InsEOL(bufPos)
 
-		yBuf++
-		xBuf = 0
+		bufPos.Y++
+		bufPos.X = 0
 	}
 
 	buf.SetDirty()
 
-	return Pos{xBuf, yBuf}
+	return bufPos
 }
 
-func (buf *Buf) DelChar(x, y int) (bufPos Pos) {
-	return buf.DelChars(x, y, 1)
+func (buf *Buf) DelChar(pos Pos) Pos {
+	return buf.DelChars(pos, 1)
 }
-func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
-	if !buf.InWriteBounds(x, y) {
-		return Pos{x, y}
+func (buf *Buf) DelChars(pos Pos, n int) Pos {
+	if !buf.InWriteBounds(pos) {
+		return pos
 	}
 
 	buf.SetDirty()
 
-	line := []rune(buf.Lines[y])
-	if x == len(line) || (x == 0 && len(line) == 0) {
+	x, y := pos.X, pos.Y
+
+	line, nline := buf.PosLine(y)
+	if x == nline || (x == 0 && nline == 0) {
 		buf.MergeLines(y, y+1)
 		n--
 	}
 
 	// Replace existing line, delete chars.
-	for n > 0 && buf.InBounds(x, y) {
-		line = []rune(buf.Lines[y])
-		nlinechars := min(n, len(line)-x)
+	for n > 0 && buf.InBounds(Pos{x, y}) {
+		line, nline = buf.PosLine(y)
+		nlinechars := min(n, nline-x)
 
 		copy(line[x:], line[x+nlinechars:])
 		line = line[:len(line)-nlinechars]
@@ -371,22 +376,28 @@ func (buf *Buf) DelChars(x, y, n int) (bufPos Pos) {
 
 //$$ Hack until buf.PrevPos() added, which should recognize the CR
 //   as a buf position.
-func (buf *Buf) DelPrevChar(x, y int) (bufPos Pos) {
-	if !buf.InWriteBounds(x, y) {
-		return Pos{x, y}
+func (buf *Buf) DelPrevChar(pos Pos) Pos {
+	if !buf.InWriteBounds(pos) {
+		return pos
 	}
 
 	buf.SetDirty()
 
+	x, y := pos.X, pos.Y
+
 	if x == 0 && y > 0 {
-		yLineLen := len([]rune(buf.Lines[y]))
+		_, yLineLen := buf.PosLine(y)
 		buf.MergeLines(y-1, y)
 
-		line := []rune(buf.Lines[y-1])
-		return Pos{len(line) - yLineLen, y - 1}
+		_, nline := buf.PosLine(y - 1)
+		return Pos{nline - yLineLen, y - 1}
 	}
 
-	return buf.DelChar(x-1, y)
+	if x == 0 && y == 0 {
+		return pos
+	}
+
+	return buf.DelChar(Pos{x - 1, y})
 }
 
 func (buf *Buf) DelLine(y int) {
