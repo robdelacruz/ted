@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
+	"unicode"
 )
 
 type Buf struct {
@@ -13,6 +15,8 @@ type Buf struct {
 	Dirty bool
 	Lines []string
 }
+
+const _tablen = 4
 
 func NewBuf() *Buf {
 	buf := &Buf{}
@@ -423,6 +427,44 @@ func (buf *Buf) MergeLines(y1, y2 int) {
 	buf.DelLine(y2)
 }
 
+// Parse line to get sequence of words.
+// Each whitespace char is considered a single word.
+// Ex. "One two  three" => ["One", " ", "two", " ", " ", "three"]
+func parseWords(s string) []string {
+	var currentWord string
+	var words []string
+
+	for _, c := range s {
+		if unicode.IsSpace(c) {
+			// Add pending word
+			words = append(words, currentWord)
+
+			// Add single space word
+			words = append(words, string(c))
+
+			currentWord = ""
+			continue
+		}
+
+		// Add char to pending word
+		currentWord += string(c)
+	}
+
+	if len(currentWord) > 0 {
+		words = append(words, currentWord)
+	}
+
+	return words
+}
+
+func nextTabStop(x, tablen int) int {
+	x++
+	for x%tablen != 0 {
+		x++
+	}
+	return x
+}
+
 func processLine(line string, maxlenWrapLine int, cbWord func(word string), cbWrapLine func(wrapline string)) {
 	if len(line) == 0 {
 		cbWrapLine(line)
@@ -437,17 +479,26 @@ func processLine(line string, maxlenWrapLine int, cbWord func(word string), cbWr
 	for _, w := range words {
 		cbWord(w)
 
-		// word can't fit in remaining wrapline, add to next wrapline.
 		lenW := len([]rune(w))
+
+		// Expand tabs with enough spaces to reach next tab stop.
+		if w == "\t" {
+			lenW = nextTabStop(xWL, _tablen) - xWL
+		}
+
+		// word can't fit in remaining wrapline, add to next wrapline.
 		if xWL+lenW > maxlenWrapLine {
 			cbWrapLine(bWL.String())
+
+			if w == "\t" {
+				lenW = _tablen
+			}
 
 			// Start new wrapline
 			xWL = 0
 			bWL.Reset()
 			bWL.WriteString(w)
 			xWL += lenW
-
 			continue
 		}
 
@@ -461,4 +512,21 @@ func processLine(line string, maxlenWrapLine int, cbWord func(word string), cbWr
 	if len(remWL) > 0 {
 		cbWrapLine(remWL)
 	}
+}
+
+func expandTabs(s string, tablen int) string {
+	var b bytes.Buffer
+	x := 0
+	for _, c := range s {
+		if c == '\t' {
+			tabSpaces := strings.Repeat(" ", nextTabStop(x, tablen)-x)
+			b.WriteString(tabSpaces)
+			x += len([]rune(tabSpaces))
+			continue
+		}
+
+		b.WriteRune(c)
+		x++
+	}
+	return b.String()
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"strings"
-	"unicode"
 
 	tb "github.com/nsf/termbox-go"
 )
@@ -46,36 +45,6 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 	return v
 }
 
-// Parse line to get sequence of words.
-// Each whitespace char is considered a single word.
-// Ex. "One two  three" => ["One", " ", "two", " ", " ", "three"]
-func parseWords(s string) []string {
-	var currentWord string
-	var words []string
-
-	for _, c := range s {
-		if unicode.IsSpace(c) {
-			// Add pending word
-			words = append(words, currentWord)
-
-			// Add single space word
-			words = append(words, expandWhitespaceChar(c))
-
-			currentWord = ""
-			continue
-		}
-
-		// Add char to pending word
-		currentWord += string(c)
-	}
-
-	if len(currentWord) > 0 {
-		words = append(words, currentWord)
-	}
-
-	return words
-}
-
 func (v *EditView) SyncBufText() {
 	v.syncWithBuf(v.Ts, nil)
 }
@@ -110,13 +79,15 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, pTsPos *Pos) {
 	cbWrapLine := func(wrapline string) {
 		// Write new wrapline to display.
 		if pTs != nil {
-			pTs.WriteString(wrapline, 0, yTs)
+			pTs.WriteString(expandTabs(wrapline, _tablen), 0, yTs)
 		}
 
 		lenWrapline := len([]rune(wrapline))
 
 		// Update ts pos if bufpos in this wrapline.
 		if pTsPos != nil && !fTsSet && v.BufPos.Y == yBuf {
+			//$$todo pTsPos incorrectly set if wrapLine has tabs expanded
+
 			if v.BufPos.X >= xBuf && v.BufPos.X <= (xBuf+lenWrapline) {
 				pTsPos.X = v.BufPos.X - xBuf
 				pTsPos.Y = yTs
