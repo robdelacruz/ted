@@ -89,11 +89,7 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, pTsPos *Pos) {
 			//$$todo pTsPos incorrectly set if wrapLine has tabs expanded
 
 			if v.BufPos.X >= xBuf && v.BufPos.X <= (xBuf+lenWrapline) {
-				pTsPos.X = v.BufPos.X - xBuf
-				pTsPos.Y = yTs
-				fTsSet = true
-			} else if v.BufPos.X == 0 {
-				pTsPos.X = 0
+				pTsPos.X = v.Buf.Distance(yBuf, xBuf, v.BufPos.X)
 				pTsPos.Y = yTs
 				fTsSet = true
 			}
@@ -254,6 +250,8 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		case tb.KeyBackspace2:
 			v.BufPos = v.Buf.DelPrevChar(v.BufPos)
 			bufChanged = true
+		case tb.KeyTab:
+			c = '\t'
 		case tb.KeySpace:
 			c = ' '
 		case 0:

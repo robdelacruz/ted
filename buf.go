@@ -514,6 +514,31 @@ func processLine(line string, maxlenWrapLine int, cbWord func(word string), cbWr
 	}
 }
 
+// Return char distance between xStart to xEnd in line y.
+// Take into account tab expansion when computing distance.
+func (buf *Buf) Distance(y, xStart, xEnd int) int {
+	if !buf.InBounds(Pos{xStart, y}) || !buf.InWriteBounds(Pos{xEnd, y}) {
+		return 0
+	}
+
+	line, _ := buf.PosLine(y)
+	line = line[xStart:xEnd]
+	dist := 0
+	x := 0
+
+	for _, c := range line {
+		if c == '\t' {
+			dist += nextTabStop(x, _tablen) - x
+			x = dist
+			continue
+		}
+		dist++
+		x++
+	}
+
+	return dist
+}
+
 func expandTabs(s string, tablen int) string {
 	var b bytes.Buffer
 	x := 0
