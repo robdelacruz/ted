@@ -216,47 +216,71 @@ func (v *EditView) GetText() string {
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	var bufChanged bool
 	var c rune
-	if e.Type == tb.EventKey {
-		switch e.Key {
-		case tb.KeyArrowLeft:
-			v.BufPos = v.Buf.PrevPos(v.BufPos)
-		case tb.KeyArrowRight:
-			v.BufPos = v.Buf.NextPos(v.BufPos)
-		case tb.KeyArrowUp:
-			v.BufPos = v.Buf.UpPos(v.BufPos)
-		case tb.KeyArrowDown:
-			v.BufPos = v.Buf.DownPos(v.BufPos)
-		case tb.KeyCtrlN:
-			fallthrough
-		case tb.KeyCtrlF:
-		case tb.KeyCtrlP:
-			fallthrough
-		case tb.KeyCtrlB:
-		case tb.KeyCtrlA:
-			v.BufPos = v.Buf.BOLPos(v.BufPos)
-		case tb.KeyCtrlE:
-			v.BufPos = v.Buf.EOLPos(v.BufPos)
-		case tb.KeyCtrlU:
-		case tb.KeyCtrlD:
-		case tb.KeyCtrlV:
-		case tb.KeyEnter:
-			v.BufPos = v.Buf.InsEOL(v.BufPos)
-			bufChanged = true
-		case tb.KeyDelete:
-			v.BufPos = v.Buf.DelChar(v.BufPos)
-			bufChanged = true
-		case tb.KeyBackspace:
-			fallthrough
-		case tb.KeyBackspace2:
-			v.BufPos = v.Buf.DelPrevChar(v.BufPos)
-			bufChanged = true
-		case tb.KeyTab:
-			c = '\t'
-		case tb.KeySpace:
-			c = ' '
-		case 0:
-			c = e.Ch
-		}
+
+	switch e.Key {
+	case tb.KeyEsc:
+		//$$ ESC
+
+	// Nav single char
+	case tb.KeyArrowLeft:
+		v.BufPos = v.Buf.PrevPos(v.BufPos)
+	case tb.KeyArrowRight:
+		v.BufPos = v.Buf.NextPos(v.BufPos)
+	case tb.KeyArrowUp:
+		v.BufPos = v.Buf.UpPos(v.BufPos)
+	case tb.KeyArrowDown:
+		v.BufPos = v.Buf.DownPos(v.BufPos)
+
+	// Nav word/line
+	case tb.KeyCtrlP:
+		fallthrough
+	case tb.KeyCtrlB:
+		//$$ go to start of previous word
+	case tb.KeyCtrlN:
+		fallthrough
+	case tb.KeyCtrlF:
+		//$$ go to start of next word
+	case tb.KeyCtrlA:
+		v.BufPos = v.Buf.BOLPos(v.BufPos)
+	case tb.KeyCtrlE:
+		v.BufPos = v.Buf.EOLPos(v.BufPos)
+
+	// Scroll text
+	case tb.KeyCtrlU:
+		//$$ scroll up half content area
+	case tb.KeyCtrlD:
+		//$$ scroll down half content area
+
+	// Select/copy/paste text
+	case tb.KeyCtrlK:
+		//$$ toggle select mode
+	case tb.KeyCtrlC:
+		//$$ copy selected text
+	case tb.KeyCtrlV:
+		//$$ paste into
+	case tb.KeyCtrlX:
+		//$$ cut selected text
+
+	// Delete text
+	case tb.KeyDelete:
+		v.BufPos = v.Buf.DelChar(v.BufPos)
+		bufChanged = true
+	case tb.KeyBackspace:
+		fallthrough
+	case tb.KeyBackspace2:
+		v.BufPos = v.Buf.DelPrevChar(v.BufPos)
+		bufChanged = true
+
+	// Text entry
+	case tb.KeyEnter:
+		v.BufPos = v.Buf.InsEOL(v.BufPos)
+		bufChanged = true
+	case tb.KeyTab:
+		c = '\t'
+	case tb.KeySpace:
+		c = ' '
+	case 0:
+		c = e.Ch
 	}
 
 	// Char entered

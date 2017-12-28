@@ -94,3 +94,16 @@ func min(n1, n2 int) int {
 	}
 	return n2
 }
+
+func WaitKBEvent() tb.Event {
+	for {
+		e := tb.PollEvent()
+		if e.Type != tb.EventKey {
+			continue
+		}
+
+		return e
+	}
+
+	return tb.Event{}
+}

@@ -90,83 +90,82 @@ ted - A terminal text editor
 	flush()
 
 	for {
-		e := tb.PollEvent()
-		if e.Type == tb.EventKey {
-			// CTRL-Q: Quit
-			if e.Key == tb.KeyCtrlQ {
-				break
-			}
+		e := WaitKBEvent()
 
-			// CTRL-O: Open File
-			if e.Key == tb.KeyCtrlO {
-				promptW.SetPrompt("Open file:")
-				promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
-				promptW.SetStatus("")
+		// CTRL-Q: Quit
+		if e.Key == tb.KeyCtrlQ {
+			break
+		}
 
-				promptW.X = termW/2 - promptWWidth/2
-				promptW.Y = termH/2 - promptW.Height()
+		// CTRL-O: Open File
+		if e.Key == tb.KeyCtrlO {
+			promptW.SetPrompt("Open file:")
+			promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
+			promptW.SetStatus("")
 
-				promptLI.Visible = true
-				layout.SetFocusItem(promptLI)
-			}
+			promptW.X = termW/2 - promptWWidth/2
+			promptW.Y = termH/2 - promptW.Height()
 
-			// CTRL-S: Save File
-			if e.Key == tb.KeyCtrlS {
-				promptW.SetPrompt("Save file:")
-				promptW.SetHint("<ENTER> to Save, <ESC> to Cancel")
-				promptW.SetStatus("")
+			promptLI.Visible = true
+			layout.SetFocusItem(promptLI)
+		}
 
-				promptW.X = termW/2 - promptWWidth/2
-				promptW.Y = termH/2 - promptW.Height()
+		// CTRL-S: Save File
+		if e.Key == tb.KeyCtrlS {
+			promptW.SetPrompt("Save file:")
+			promptW.SetHint("<ENTER> to Save, <ESC> to Cancel")
+			promptW.SetStatus("")
 
-				file := editBuf.Name
-				promptW.SetEdit(file)
+			promptW.X = termW/2 - promptWWidth/2
+			promptW.Y = termH/2 - promptW.Height()
 
-				promptLI.Visible = true
-				layout.SetFocusItem(promptLI)
-			}
+			file := editBuf.Name
+			promptW.SetEdit(file)
 
-			w, evid := layout.HandleEvent(&e)
-			switch w := w.(type) {
-			case *Prompt:
-				promptW := w
+			promptLI.Visible = true
+			layout.SetFocusItem(promptLI)
+		}
 
-				if evid == PromptCancel {
-					promptW.SetEdit("")
-					layout.SetFocusItem(editLI)
-					promptLI.Visible = false
-				} else if evid == PromptOK {
-					prompt := strings.TrimSpace(promptW.GetPrompt())
-					_log.Printf("prompt = '%s'\n", prompt)
-					if prompt == "Open file:" {
-						file := promptW.GetEditText()
-						err := editBuf.Load(file)
-						if err != nil {
-							serr := fmt.Sprintf("Error (%s).", err)
-							promptW.SetStatus(serr)
-							promptW.SetEdit("")
-						} else {
-							promptW.Clear()
-							layout.SetFocusItem(editLI)
-							editW.ResetCur()
-							editW.SyncBufText()
-							promptLI.Visible = false
-						}
+		w, evid := layout.HandleEvent(&e)
+		switch w := w.(type) {
+		case *Prompt:
+			promptW := w
+
+			if evid == PromptCancel {
+				promptW.SetEdit("")
+				layout.SetFocusItem(editLI)
+				promptLI.Visible = false
+			} else if evid == PromptOK {
+				prompt := strings.TrimSpace(promptW.GetPrompt())
+				_log.Printf("prompt = '%s'\n", prompt)
+				if prompt == "Open file:" {
+					file := promptW.GetEditText()
+					err := editBuf.Load(file)
+					if err != nil {
+						serr := fmt.Sprintf("Error (%s).", err)
+						promptW.SetStatus(serr)
+						promptW.SetEdit("")
+					} else {
+						promptW.Clear()
+						layout.SetFocusItem(editLI)
+						editW.ResetCur()
+						editW.SyncBufText()
+						promptLI.Visible = false
 					}
+				}
 
-					if prompt == "Save file:" {
-						file := promptW.GetEditText()
-						editBuf.Name = file
-						err := editBuf.Save(file)
-						if err != nil {
-							serr := fmt.Sprintf("Error (%s).", err)
-							promptW.SetStatus(serr)
-							promptW.SetEdit("")
-						} else {
-							promptW.Clear()
-							layout.SetFocusItem(editLI)
-							promptLI.Visible = false
-						}
+				if prompt == "Save file:" {
+					file := promptW.GetEditText()
+					editBuf.Name = file
+					err := editBuf.Save(file)
+					if err != nil {
+						serr := fmt.Sprintf("Error (%s).", err)
+						promptW.SetStatus(serr)
+						promptW.SetEdit("")
+					} else {
+						promptW.Clear()
+						layout.SetFocusItem(editLI)
+						promptLI.Visible = false
 					}
 				}
 			}
