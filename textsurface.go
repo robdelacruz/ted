@@ -48,10 +48,18 @@ func (ts *TextSurface) WriteString(s string, x, y int) {
 	}
 }
 
-func (ts *TextSurface) Char(x, y int) rune {
+func (ts *TextSurface) ch(x, y int) rune {
 	if y < 0 || y > ts.H-1 || x < 0 || x > ts.W-1 {
 		return 0
 	}
 
 	return ts.Lines[y][x]
+}
+
+func (ts *TextSurface) Char(x, y int) rune {
+	ch := ts.ch(x, y)
+	if ch == 0 {
+		return ' '
+	}
+	return ch
 }

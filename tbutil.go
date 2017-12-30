@@ -26,6 +26,10 @@ func (pos *Pos) String() string {
 	return fmt.Sprintf("%d,%d", pos.X, pos.Y)
 }
 
+func reverseAttr(attr TermAttr) TermAttr {
+	return TermAttr{attr.Bg, attr.Fg}
+}
+
 func flush() {
 	err := tb.Flush()
 	if err != nil {

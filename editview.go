@@ -15,7 +15,10 @@ type EditView struct {
 	ContentAttr TermAttr
 	StatusAttr  TermAttr
 	BufPos      Pos
-	YBufOffset  int
+
+	SelMode  bool
+	SelBegin Pos
+	SelEnd   Pos
 }
 
 type EditViewMode uint
@@ -46,28 +49,22 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 }
 
 func (v *EditView) SyncBufText() {
-	v.syncWithBuf(v.Ts, nil)
+	v.syncWithBuf(v.Ts)
 }
-func (v *EditView) bufPosToTsPos() Pos {
-	var tsPos Pos
-	v.syncWithBuf(nil, &tsPos)
-	return tsPos
+func (v *EditView) convBufPos(bufPos ...Pos) []*Pos {
+	return v.syncWithBuf(nil, bufPos...)
 }
-func (v *EditView) SyncBufTextSurfacePos() Pos {
-	var tsPos Pos
-	v.syncWithBuf(v.Ts, &tsPos)
-	return tsPos
-}
-func (v *EditView) syncWithBuf(pTs *TextSurface, pTsPos *Pos) {
+
+func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 	yTs := 0
-	xBuf, yBuf := 0, v.YBufOffset
+	xBuf, yBuf := 0, 0
 
 	maxlenWrapline := v.Ts.W
 	if pTs != nil {
 		maxlenWrapline = pTs.W
 	}
 
-	var fTsSet bool
+	retTsPos := make([]*Pos, len(bufPosItems))
 
 	if pTs != nil {
 		pTs.Clear(0)
@@ -78,20 +75,24 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, pTsPos *Pos) {
 
 	cbWrapLine := func(wrapline string) {
 		// Write new wrapline to display.
-		if pTs != nil {
+		if pTs != nil && yTs < v.Ts.H {
 			pTs.WriteString(expandTabs(wrapline, _tablen), 0, yTs)
 		}
 
 		lenWrapline := len([]rune(wrapline))
 
-		// Update ts pos if bufpos in this wrapline.
-		if pTsPos != nil && !fTsSet && v.BufPos.Y == yBuf {
-			//$$todo pTsPos incorrectly set if wrapLine has tabs expanded
+		for i, bufPos := range bufPosItems {
+			if retTsPos[i] != nil {
+				continue
+			}
 
-			if v.BufPos.X >= xBuf && v.BufPos.X <= (xBuf+lenWrapline) {
-				pTsPos.X = v.Buf.Distance(yBuf, xBuf, v.BufPos.X)
-				pTsPos.Y = yTs
-				fTsSet = true
+			// Update ts pos if bufpos in this wrapline.
+			if bufPos.Y == yBuf {
+				if bufPos.X >= xBuf && bufPos.X <= (xBuf+lenWrapline) {
+					x := v.Buf.Distance(yBuf, xBuf, bufPos.X)
+					y := yTs
+					retTsPos[i] = &Pos{x, y}
+				}
 			}
 		}
 
@@ -99,13 +100,18 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, pTsPos *Pos) {
 		xBuf += lenWrapline
 	}
 
-	for yBuf < len(v.Buf.Lines) {
+	nLinesRead := 0
+	for yBuf < len(v.Buf.Lines) && nLinesRead < v.Ts.H {
 		bufLine := v.Buf.Lines[yBuf]
 
 		processLine(bufLine, maxlenWrapline, cbWord, cbWrapLine)
+
+		nLinesRead++
 		yBuf++
 		xBuf = 0
 	}
+
+	return retTsPos
 }
 
 func (v *EditView) contentRect() Rect {
@@ -128,27 +134,73 @@ func (v *EditView) Draw() {
 		boxAttr := v.ContentAttr
 		drawBox(v.Rect.X, v.Rect.Y, v.Rect.W, v.Rect.H, boxAttr)
 	}
-	v.drawText()
+
+	bufSelBegin, bufSelEnd := v.OrderedSelPos(v.SelBegin, v.SelEnd)
+	retTsPos := v.convBufPos(v.BufPos, bufSelBegin, bufSelEnd)
+	pTsPos := retTsPos[0]
+	pSelTsBeginPos := retTsPos[1]
+	pSelTsEndPos := retTsPos[2]
+
+	if pSelTsBeginPos == nil {
+		pSelTsBeginPos = &Pos{0, 0}
+	}
+	if pSelTsEndPos == nil {
+		pSelTsEndPos = &Pos{v.Ts.H - 1, v.Ts.W - 1}
+	}
+
+	v.drawText(*pSelTsBeginPos, *pSelTsEndPos)
 
 	if v.Mode&EditViewStatusLine != 0 {
 		v.drawStatus()
 	}
 
-	v.drawCursor()
+	if pTsPos != nil {
+		v.drawCursor(*pTsPos)
+	}
 }
 
-func (v *EditView) drawText() {
+func (v *EditView) drawText(selTsBeginPos, selTsEndPos Pos) {
 	rect := v.contentRect()
 
 	for yTs := 0; yTs < v.Ts.H; yTs++ {
 		for xTs := 0; xTs < v.Ts.W; xTs++ {
 			c := v.Ts.Char(xTs, yTs)
-			if c == 0 {
-				c = ' '
-			}
 			printCh(c, rect.X+xTs, rect.Y+yTs, v.ContentAttr)
 		}
 	}
+
+	if v.SelMode {
+		v.drawSelText(selTsBeginPos, selTsEndPos)
+	}
+}
+
+func (v *EditView) drawTsLine(xTsStart, xTsEnd, yTs int, attr TermAttr, contentRect Rect) {
+	for xTs := xTsStart; xTs <= xTsEnd; xTs++ {
+		c := v.Ts.Char(xTs, yTs)
+		printCh(c, contentRect.X+xTs, contentRect.Y+yTs, attr)
+	}
+}
+
+func (v *EditView) drawSelText(tsBegin, tsEnd Pos) {
+	rect := v.contentRect()
+	selAttr := reverseAttr(v.ContentAttr)
+
+	// One line only
+	if tsBegin.Y == tsEnd.Y {
+		v.drawTsLine(tsBegin.X, tsEnd.X, tsBegin.Y, selAttr, rect)
+		return
+	}
+
+	// Topmost line
+	v.drawTsLine(tsBegin.X, v.Ts.W-1, tsBegin.Y, selAttr, rect)
+
+	// Middle lines
+	for yTs := tsBegin.Y + 1; yTs < tsEnd.Y; yTs++ {
+		v.drawTsLine(0, v.Ts.W-1, yTs, selAttr, rect)
+	}
+
+	// Bottommost line
+	v.drawTsLine(0, tsEnd.X, tsEnd.Y, selAttr, rect)
 }
 
 // Draw status line one row below content area.
@@ -172,9 +224,16 @@ func (v *EditView) drawStatus() {
 	}
 	print(bufName, left, y, v.StatusAttr)
 
-	// Buf pos (x,y)
+	// Buf pos y,x
 	sBufPos := fmt.Sprintf("%d,%d", v.BufPos.Y+1, v.BufPos.X+1)
 	print(sBufPos, left+width-(width/3), y, v.StatusAttr)
+
+	// Sel range y,x - y,x
+	if v.SelMode {
+		selBegin, selEnd := v.OrderedSelPos(v.SelBegin, v.SelEnd)
+		sSelRange := fmt.Sprintf("%d,%d - %d,%d", selBegin.Y+1, selBegin.X+1, selEnd.Y+1, selEnd.X+1)
+		print(sSelRange, left+width-(width*2/3), y, v.StatusAttr)
+	}
 
 	// Pos in doc (%)
 	var sYDist string
@@ -187,8 +246,7 @@ func (v *EditView) drawStatus() {
 	print(sYDist, left+width-len(sYDist), y, v.StatusAttr)
 }
 
-func (v *EditView) drawCursor() {
-	tsPos := v.bufPosToTsPos()
+func (v *EditView) drawCursor(tsPos Pos) {
 	rect := v.contentRect()
 	tb.SetCursor(rect.X+tsPos.X, rect.Y+tsPos.Y)
 }
@@ -200,7 +258,6 @@ func (v *EditView) Clear() {
 }
 func (v *EditView) ResetCur() {
 	v.BufPos = Pos{0, 0}
-	v.YBufOffset = 0
 }
 
 func (v *EditView) SetText(s string) {
@@ -213,23 +270,52 @@ func (v *EditView) GetText() string {
 	return v.Buf.GetText()
 }
 
+func (v *EditView) StartSelMode() {
+	v.SelMode = true
+	v.SelBegin = v.BufPos
+	v.SelEnd = v.BufPos
+}
+func (v *EditView) EndSelMode() {
+	v.SelMode = false
+	v.SelBegin = v.BufPos
+	v.SelEnd = v.BufPos
+}
+func (v *EditView) UpdateSelPos() {
+	if v.SelMode {
+		v.SelEnd = v.BufPos
+	}
+}
+
+// Return pos in first, last order..
+func (v *EditView) OrderedSelPos(pos1, pos2 Pos) (Pos, Pos) {
+	if (pos2.Y > pos1.Y) ||
+		(pos2.Y == pos1.Y && pos2.X > pos1.X) {
+		return pos1, pos2
+	}
+	return pos2, pos1
+}
+
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	var bufChanged bool
 	var c rune
 
 	switch e.Key {
 	case tb.KeyEsc:
-		//$$ ESC
+		v.EndSelMode()
 
 	// Nav single char
 	case tb.KeyArrowLeft:
 		v.BufPos = v.Buf.PrevPos(v.BufPos)
+		v.UpdateSelPos()
 	case tb.KeyArrowRight:
 		v.BufPos = v.Buf.NextPos(v.BufPos)
+		v.UpdateSelPos()
 	case tb.KeyArrowUp:
 		v.BufPos = v.Buf.UpPos(v.BufPos)
+		v.UpdateSelPos()
 	case tb.KeyArrowDown:
 		v.BufPos = v.Buf.DownPos(v.BufPos)
+		v.UpdateSelPos()
 
 	// Nav word/line
 	case tb.KeyCtrlP:
@@ -242,8 +328,10 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		//$$ go to start of next word
 	case tb.KeyCtrlA:
 		v.BufPos = v.Buf.BOLPos(v.BufPos)
+		v.UpdateSelPos()
 	case tb.KeyCtrlE:
 		v.BufPos = v.Buf.EOLPos(v.BufPos)
+		v.UpdateSelPos()
 
 	// Scroll text
 	case tb.KeyCtrlU:
@@ -253,7 +341,12 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	// Select/copy/paste text
 	case tb.KeyCtrlK:
-		//$$ toggle select mode
+		v.SelMode = !v.SelMode
+		if v.SelMode {
+			v.StartSelMode()
+		} else {
+			v.EndSelMode()
+		}
 	case tb.KeyCtrlC:
 		//$$ copy selected text
 	case tb.KeyCtrlV:
