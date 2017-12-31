@@ -28,13 +28,40 @@ func (ts *TextSurface) Clear(c rune) {
 		}
 	}
 }
-
-func (ts *TextSurface) WriteString(s string, x, y int) {
-	if y < 0 || y > ts.H-1 {
+func (ts *TextSurface) ClearLine(y int, c rune) {
+	if y < 0 || y > len(ts.Lines)-1 {
 		return
 	}
+	for x := 0; x < ts.W; x++ {
+		ts.Lines[y][x] = c
+	}
+}
+
+func (ts *TextSurface) ResizeLines(n int) {
+	nLines := len(ts.Lines)
+	if n < nLines {
+		ts.Lines = ts.Lines[:n]
+	}
+	if n > nLines {
+		for y := nLines; y < n-nLines; y++ {
+			ts.Lines = append(ts.Lines, make([]rune, ts.W))
+			ts.ClearLine(y, 0)
+		}
+	}
+	ts.H = n
+}
+
+func (ts *TextSurface) WriteString(s string, x, y int) {
 	if x < 0 || x > ts.W-1 {
 		return
+	}
+	if y < 0 {
+		return
+	}
+
+	if y > ts.H-1 {
+		ts.Lines = append(ts.Lines, make([]rune, ts.W))
+		ts.H = len(ts.Lines)
 	}
 
 	tsLine := ts.Lines[y]

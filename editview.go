@@ -15,6 +15,7 @@ type EditView struct {
 	ContentAttr TermAttr
 	StatusAttr  TermAttr
 	BufPos      Pos
+	ScrollPos   Pos
 
 	SelMode  bool
 	SelBegin Pos
@@ -75,7 +76,7 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 
 	cbWrapLine := func(wrapline string) {
 		// Write new wrapline to display.
-		if pTs != nil && yTs < v.Ts.H {
+		if pTs != nil {
 			pTs.WriteString(expandTabs(wrapline, _tablen), 0, yTs)
 		}
 
@@ -100,16 +101,15 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 		xBuf += lenWrapline
 	}
 
-	nLinesRead := 0
-	for yBuf < len(v.Buf.Lines) && nLinesRead < v.Ts.H {
+	for yBuf < len(v.Buf.Lines) {
 		bufLine := v.Buf.Lines[yBuf]
 
 		processLine(bufLine, maxlenWrapline, cbWord, cbWrapLine)
 
-		nLinesRead++
 		yBuf++
 		xBuf = 0
 	}
+	v.Ts.ResizeLines(yTs)
 
 	return retTsPos
 }
@@ -162,10 +162,10 @@ func (v *EditView) Draw() {
 func (v *EditView) drawText(selTsBeginPos, selTsEndPos Pos) {
 	rect := v.contentRect()
 
-	for yTs := 0; yTs < v.Ts.H; yTs++ {
-		for xTs := 0; xTs < v.Ts.W; xTs++ {
+	for yTs := v.ScrollPos.Y; yTs < rect.H && yTs < v.Ts.H; yTs++ {
+		for xTs := 0; xTs < rect.W; xTs++ {
 			c := v.Ts.Char(xTs, yTs)
-			printCh(c, rect.X+xTs, rect.Y+yTs, v.ContentAttr)
+			printCh(c, rect.X+xTs, rect.Y+yTs-v.ScrollPos.Y, v.ContentAttr)
 		}
 	}
 
@@ -177,7 +177,7 @@ func (v *EditView) drawText(selTsBeginPos, selTsEndPos Pos) {
 func (v *EditView) drawTsLine(xTsStart, xTsEnd, yTs int, attr TermAttr, contentRect Rect) {
 	for xTs := xTsStart; xTs <= xTsEnd; xTs++ {
 		c := v.Ts.Char(xTs, yTs)
-		printCh(c, contentRect.X+xTs, contentRect.Y+yTs, attr)
+		printCh(c, contentRect.X+xTs, contentRect.Y+yTs-v.ScrollPos.Y, attr)
 	}
 }
 
@@ -248,7 +248,11 @@ func (v *EditView) drawStatus() {
 
 func (v *EditView) drawCursor(tsPos Pos) {
 	rect := v.contentRect()
-	tb.SetCursor(rect.X+tsPos.X, rect.Y+tsPos.Y)
+	tsPos.Y -= v.ScrollPos.Y
+
+	if tsPos.X < rect.W && tsPos.Y < rect.H {
+		tb.SetCursor(rect.X+tsPos.X, rect.Y+tsPos.Y)
+	}
 }
 
 func (v *EditView) Clear() {
