@@ -55,6 +55,23 @@ func (v *EditView) SyncBufText() {
 func (v *EditView) convBufPos(bufPos ...Pos) []*Pos {
 	return v.syncWithBuf(nil, bufPos...)
 }
+func (v *EditView) tsPosFromBufPos(bufPos Pos) Pos {
+	retTsPos := v.convBufPos(bufPos)
+	pTsPos := retTsPos[0]
+	if pTsPos == nil {
+		return Pos{0, 0}
+	}
+	return *pTsPos
+}
+
+// Remove any trailing '\n'
+func chomp(line string) string {
+	nline := len(line)
+	if nline > 0 && line[nline-1] == '\n' {
+		return line[:nline-1]
+	}
+	return line
+}
 
 func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 	yTs := 0
@@ -77,7 +94,7 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 	cbWrapLine := func(wrapline string) {
 		// Write new wrapline to display.
 		if pTs != nil {
-			pTs.WriteString(expandTabs(wrapline, _tablen), 0, yTs)
+			pTs.WriteString(chomp(expandTabs(wrapline, _tablen)), 0, yTs)
 		}
 
 		lenWrapline := len([]rune(wrapline))
@@ -89,10 +106,15 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 
 			// Update ts pos if bufpos in this wrapline.
 			if bufPos.Y == yBuf {
-				if bufPos.X >= xBuf && bufPos.X <= (xBuf+lenWrapline) {
+				//if bufPos.X >= xBuf && bufPos.X <= (xBuf+lenWrapline) {
+				if bufPos.X >= xBuf && bufPos.X < (xBuf+lenWrapline) {
 					x := v.Buf.Distance(yBuf, xBuf, bufPos.X)
 					y := yTs
 					retTsPos[i] = &Pos{x, y}
+				}
+
+				if bufPos.X == 0 && xBuf == 0 && lenWrapline == 0 {
+					retTsPos[i] = &Pos{0, yTs}
 				}
 			}
 		}
@@ -112,6 +134,97 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 	v.Ts.ResizeLines(yTs)
 
 	return retTsPos
+}
+
+func (v *EditView) UpPos(bufPos Pos) Pos {
+	_, nline := v.Buf.PosLine(bufPos.Y)
+	if nline == 0 {
+		if bufPos.Y > 0 {
+			bufPos.Y--
+			bufPos.X = 0
+		}
+		return bufPos
+	}
+
+	// Get Ts pos of bufPos
+	// Ts pos will be used to nav up
+	retTsPos := v.syncWithBuf(v.Ts, bufPos)
+	pTsPos := retTsPos[0]
+	if pTsPos == nil {
+		return bufPos
+	}
+	tsPos := *pTsPos
+
+	// If no Ts row above
+	if tsPos.Y == 0 {
+		return bufPos
+	}
+
+	tsUpPos := Pos{tsPos.X, tsPos.Y - 1}
+
+	for {
+		ch := v.Ts.Ch(tsPos.X, tsPos.Y)
+		if ch != 0 {
+			bufPos = v.Buf.PrevPosBounds(bufPos)
+		}
+
+		tsPos.X--
+		if tsPos.X < 0 {
+			tsPos.X = v.Ts.W - 1
+			tsPos.Y--
+		}
+
+		if tsPos == tsUpPos {
+			break
+		}
+	}
+
+	return bufPos
+}
+
+func (v *EditView) DownPos(bufPos Pos) Pos {
+	_, nline := v.Buf.PosLine(bufPos.Y)
+	if nline == 0 {
+		if bufPos.Y < v.Buf.NumLines()-1 {
+			bufPos.Y++
+		}
+		return bufPos
+	}
+
+	// Get Ts pos of bufPos
+	// Ts pos will be used to nav down
+	retTsPos := v.syncWithBuf(v.Ts, bufPos)
+	pTsPos := retTsPos[0]
+	if pTsPos == nil {
+		return bufPos
+	}
+	tsPos := *pTsPos
+
+	// If no Ts row below
+	if tsPos.Y+1 > v.Ts.H-1 {
+		return bufPos
+	}
+
+	tsDownPos := Pos{tsPos.X, tsPos.Y + 1}
+
+	for {
+		ch := v.Ts.Ch(tsPos.X, tsPos.Y)
+		if ch != 0 {
+			bufPos = v.Buf.NextPosBounds(bufPos)
+		}
+
+		tsPos.X++
+		if tsPos.X > v.Ts.W-1 {
+			tsPos.X = 0
+			tsPos.Y++
+		}
+
+		if tsPos == tsDownPos {
+			break
+		}
+	}
+
+	return bufPos
 }
 
 func (v *EditView) contentRect() Rect {
@@ -228,6 +341,11 @@ func (v *EditView) drawStatus() {
 	sBufPos := fmt.Sprintf("%d,%d", v.BufPos.Y+1, v.BufPos.X+1)
 	print(sBufPos, left+width-(width/3), y, v.StatusAttr)
 
+	//$$ Ts pos y,x
+	tsPos := v.tsPosFromBufPos(v.BufPos)
+	sTsPos := fmt.Sprintf("Ts:(%d,%d)", tsPos.Y, tsPos.X)
+	print(sTsPos, left+width-(width*2/3), y, v.StatusAttr)
+
 	// Sel range y,x - y,x
 	if v.SelMode {
 		selBegin, selEnd := v.OrderedSelPos(v.SelBegin, v.SelEnd)
@@ -315,10 +433,12 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		v.BufPos = v.Buf.NextPos(v.BufPos)
 		v.UpdateSelPos()
 	case tb.KeyArrowUp:
-		v.BufPos = v.Buf.UpPos(v.BufPos)
+		//v.BufPos = v.Buf.UpPos(v.BufPos)
+		v.BufPos = v.UpPos(v.BufPos)
 		v.UpdateSelPos()
 	case tb.KeyArrowDown:
-		v.BufPos = v.Buf.DownPos(v.BufPos)
+		//v.BufPos = v.Buf.DownPos(v.BufPos)
+		v.BufPos = v.DownPos(v.BufPos)
 		v.UpdateSelPos()
 
 	// Nav word/line

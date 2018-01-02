@@ -118,6 +118,59 @@ func (buf *Buf) NextPos(pos Pos) Pos {
 	return pos
 }
 
+// Like PrevPos() but only traversing existing char positions.
+func (buf *Buf) PrevPosBounds(pos Pos) Pos {
+	if !buf.InBounds(pos) {
+		return pos
+	}
+
+	if pos.X > 0 {
+		pos.X--
+		return pos
+	}
+
+	if pos.Y > 0 {
+		pos.Y--
+		_, nline := buf.PosLine(pos.Y)
+		pos.X = nline - 1
+		if pos.X < 0 {
+			pos.X = 0
+		}
+		return pos
+	}
+
+	return pos
+}
+
+// Like NextPos() but only traversing existing char positions.
+func (buf *Buf) NextPosBounds(pos Pos) Pos {
+	_, nline := buf.PosLine(pos.Y)
+	numLines := buf.NumLines()
+	if nline == 0 {
+		if pos.Y < numLines-1 {
+			pos.Y++
+		}
+		return pos
+	}
+
+	if !buf.InBounds(pos) {
+		return pos
+	}
+
+	if pos.X < nline-1 {
+		pos.X++
+		return pos
+	}
+
+	if pos.Y < numLines-1 {
+		pos.Y++
+		pos.X = 0
+		return pos
+	}
+
+	return pos
+}
+
 func (buf *Buf) BOLPos(pos Pos) Pos {
 	pos.X = 0
 	return pos
@@ -476,7 +529,7 @@ func processLine(line string, maxlenWrapLine int, cbWord func(word string), cbWr
 	var bWL bytes.Buffer // current wrapline
 
 	words := parseWords(line)
-	for _, w := range words {
+	for i, w := range words {
 		cbWord(w)
 
 		lenW := len([]rune(w))
@@ -498,12 +551,20 @@ func processLine(line string, maxlenWrapLine int, cbWord func(word string), cbWr
 			xWL = 0
 			bWL.Reset()
 			bWL.WriteString(w)
+			if i == len(words)-1 {
+				bWL.WriteRune('\n')
+				xWL++
+			}
 			xWL += lenW
 			continue
 		}
 
 		// add word to remaining wrapline.
 		bWL.WriteString(w)
+		if i == len(words)-1 {
+			bWL.WriteRune('\n')
+			xWL++
+		}
 		xWL += lenW
 	}
 
