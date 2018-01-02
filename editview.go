@@ -137,6 +137,20 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 }
 
 func (v *EditView) UpPos(bufPos Pos) Pos {
+	_, nline := v.Buf.PosLine(bufPos.Y)
+	if nline == 0 {
+		if bufPos.Y > 0 {
+			bufPos.Y--
+			_, nline := v.Buf.PosLine(bufPos.Y)
+			if nline == 0 {
+				bufPos.X = 0
+			} else if bufPos.X > nline-1 {
+				bufPos.X = nline - 1
+			}
+		}
+		return bufPos
+	}
+
 	// Get Ts pos of bufPos
 	// Ts pos will be used to nav up
 	retTsPos := v.syncWithBuf(v.Ts, bufPos)
@@ -155,7 +169,7 @@ func (v *EditView) UpPos(bufPos Pos) Pos {
 
 	tsChs := v.Ts.RangeChars(tsUpPos, tsPos)
 	for range tsChs {
-		bufPos = v.Buf.PrevPosBounds(bufPos)
+		bufPos = v.Buf.PrevPos(bufPos)
 	}
 
 	return bufPos
@@ -163,9 +177,15 @@ func (v *EditView) UpPos(bufPos Pos) Pos {
 
 func (v *EditView) DownPos(bufPos Pos) Pos {
 	_, nline := v.Buf.PosLine(bufPos.Y)
-	if nline == 0 {
+	if nline <= v.Ts.W {
 		if bufPos.Y < v.Buf.NumLines()-1 {
 			bufPos.Y++
+			_, nline := v.Buf.PosLine(bufPos.Y)
+			if nline == 0 {
+				bufPos.X = 0
+			} else if bufPos.X > nline-1 {
+				bufPos.X = nline - 1
+			}
 		}
 		return bufPos
 	}
@@ -256,8 +276,10 @@ func (v *EditView) drawText(selTsBeginPos, selTsEndPos Pos) {
 
 func (v *EditView) drawTsLine(xTsStart, xTsEnd, yTs int, attr TermAttr, contentRect Rect) {
 	for xTs := xTsStart; xTs <= xTsEnd; xTs++ {
-		c := v.Ts.Char(xTs, yTs)
-		printCh(c, contentRect.X+xTs, contentRect.Y+yTs-v.ScrollPos.Y, attr)
+		c := v.Ts.Ch(xTs, yTs)
+		if c != 0 {
+			printCh(c, contentRect.X+xTs, contentRect.Y+yTs-v.ScrollPos.Y, attr)
+		}
 	}
 }
 
@@ -400,12 +422,12 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		v.BufPos = v.Buf.NextPos(v.BufPos)
 		v.UpdateSelPos()
 	case tb.KeyArrowUp:
-		//v.BufPos = v.Buf.UpPos(v.BufPos)
-		v.BufPos = v.UpPos(v.BufPos)
+		v.BufPos = v.Buf.UpPos(v.BufPos)
+		//v.BufPos = v.UpPos(v.BufPos)
 		v.UpdateSelPos()
 	case tb.KeyArrowDown:
-		//v.BufPos = v.Buf.DownPos(v.BufPos)
-		v.BufPos = v.DownPos(v.BufPos)
+		v.BufPos = v.Buf.DownPos(v.BufPos)
+		//v.BufPos = v.DownPos(v.BufPos)
 		v.UpdateSelPos()
 
 	// Nav word/line
