@@ -137,15 +137,6 @@ func (v *EditView) syncWithBuf(pTs *TextSurface, bufPosItems ...Pos) []*Pos {
 }
 
 func (v *EditView) UpPos(bufPos Pos) Pos {
-	_, nline := v.Buf.PosLine(bufPos.Y)
-	if nline == 0 {
-		if bufPos.Y > 0 {
-			bufPos.Y--
-			bufPos.X = 0
-		}
-		return bufPos
-	}
-
 	// Get Ts pos of bufPos
 	// Ts pos will be used to nav up
 	retTsPos := v.syncWithBuf(v.Ts, bufPos)
@@ -162,21 +153,9 @@ func (v *EditView) UpPos(bufPos Pos) Pos {
 
 	tsUpPos := Pos{tsPos.X, tsPos.Y - 1}
 
-	for {
-		ch := v.Ts.Ch(tsPos.X, tsPos.Y)
-		if ch != 0 {
-			bufPos = v.Buf.PrevPosBounds(bufPos)
-		}
-
-		tsPos.X--
-		if tsPos.X < 0 {
-			tsPos.X = v.Ts.W - 1
-			tsPos.Y--
-		}
-
-		if tsPos == tsUpPos {
-			break
-		}
+	tsChs := v.Ts.RangeChars(tsUpPos, tsPos)
+	for range tsChs {
+		bufPos = v.Buf.PrevPosBounds(bufPos)
 	}
 
 	return bufPos
@@ -207,21 +186,9 @@ func (v *EditView) DownPos(bufPos Pos) Pos {
 
 	tsDownPos := Pos{tsPos.X, tsPos.Y + 1}
 
-	for {
-		ch := v.Ts.Ch(tsPos.X, tsPos.Y)
-		if ch != 0 {
-			bufPos = v.Buf.NextPosBounds(bufPos)
-		}
-
-		tsPos.X++
-		if tsPos.X > v.Ts.W-1 {
-			tsPos.X = 0
-			tsPos.Y++
-		}
-
-		if tsPos == tsDownPos {
-			break
-		}
+	tsChs := v.Ts.RangeChars(tsPos, tsDownPos)
+	for range tsChs {
+		bufPos = v.Buf.NextPosBounds(bufPos)
 	}
 
 	return bufPos

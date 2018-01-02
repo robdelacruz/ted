@@ -90,3 +90,29 @@ func (ts *TextSurface) Char(x, y int) rune {
 	}
 	return ch
 }
+
+func (ts *TextSurface) RangeChars(posStart, posEnd Pos) []rune {
+	chs := []rune{}
+
+	for {
+		if posStart.Y > posEnd.Y {
+			break
+		}
+		if posStart.Y == posEnd.Y && posStart.X >= posEnd.X {
+			break
+		}
+
+		ch := ts.Ch(posStart.X, posStart.Y)
+		if ch != 0 {
+			chs = append(chs, ch)
+		}
+
+		posStart.X++
+		if posStart.X > ts.W-1 {
+			posStart.X = 0
+			posStart.Y++
+		}
+	}
+
+	return chs
+}
