@@ -6,8 +6,8 @@ import (
 
 type Panel struct {
 	Rect
-	*Buf
-	*TextBlk
+	//	*Buf
+	//	*TextBlk
 	Opts PanelOptions
 }
 
@@ -27,12 +27,12 @@ func NewPanel(x, y, w, h int, opts PanelOptions) *Panel {
 	p := &Panel{}
 	p.Rect = NewRect(x, y, w, h)
 	p.Opts = opts
-	p.Buf = NewBuf()
-	p.Buf.SetText(opts.Text)
+	//	p.Buf = NewBuf()
+	//	p.Buf.SetText(opts.Text)
 	if opts.Mode&PanelBorder != 0 {
 		w -= 2
 	}
-	p.TextBlk = NewTextBlk(w, 0)
+	//	p.TextBlk = NewTextBlk(w, 0)
 	p.SyncText()
 
 	return p
@@ -60,18 +60,19 @@ func (p *Panel) drawText() {
 		rect.H -= 2
 	}
 
-	p.TextBlk.PrintToArea(rect, p.Opts.Attr)
+	//	p.TextBlk.PrintToArea(rect, p.Opts.Attr)
 }
 
 func (p *Panel) SetText(s string) {
-	p.Buf.SetText(s)
+	//	p.Buf.SetText(s)
 	p.SyncText()
 }
 func (p *Panel) GetText() string {
-	return p.Buf.GetText()
+	//	return p.Buf.Text()
+	return ""
 }
 func (p *Panel) SyncText() {
-	p.TextBlk.FillWithBuf(p.Buf)
+	//	p.TextBlk.FillWithBuf(p.Buf)
 }
 
 func (p *Panel) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {

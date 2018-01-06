@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	tb "github.com/nsf/termbox-go"
 )
@@ -92,11 +93,19 @@ func adjPos(outline, content Rect, x, y, borderWidth, paddingWidth int) (retOutl
 	return retOutline, retContent
 }
 
-func min(n1, n2 int) int {
-	if n1 < n2 {
-		return n1
+func min(ns ...int) int {
+	lenNs := len(ns)
+	if lenNs == 0 {
+		return 0
 	}
-	return n2
+
+	smallest := ns[0]
+	for _, n := range ns {
+		if n < smallest {
+			smallest = n
+		}
+	}
+	return smallest
 }
 
 func WaitKBEvent() tb.Event {
@@ -110,4 +119,34 @@ func WaitKBEvent() tb.Event {
 	}
 
 	return tb.Event{}
+}
+
+// Parse line to get sequence of words.
+// Each whitespace char is considered a single word.
+// Ex. "One two  three" => ["One", " ", "two", " ", " ", "three"]
+func parseWords(s string) []string {
+	var currentWord string
+	var words []string
+
+	for _, c := range s {
+		if unicode.IsSpace(c) {
+			// Add pending word
+			words = append(words, currentWord)
+
+			// Add single space word
+			words = append(words, string(c))
+
+			currentWord = ""
+			continue
+		}
+
+		// Add char to pending word
+		currentWord += string(c)
+	}
+
+	if len(currentWord) > 0 {
+		words = append(words, currentWord)
+	}
+
+	return words
 }

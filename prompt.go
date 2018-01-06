@@ -67,7 +67,7 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 	offsY += qPanel.H
 
 	edit := NewEditView(offsX, offsY, w, opts.AnsHeight, 0, opts.AnsAttr, BWAttr, nil)
-	offsY += edit.H
+	offsY += edit.Rect.H
 
 	var hintPanel *Panel
 	if opts.HintHeight > 0 {
@@ -141,7 +141,7 @@ func (pr *Prompt) Clear() {
 func (pr *Prompt) contentRect() Rect {
 	rect := pr.Rect
 
-	rect.H = pr.QPanel.H + pr.Edit.H
+	rect.H = pr.QPanel.H + pr.Edit.Rect.H
 	if pr.HintPanel != nil && pr.GetHint() != "" {
 		rect.H += pr.HintPanel.H
 	}
