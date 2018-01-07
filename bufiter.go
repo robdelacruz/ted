@@ -2,69 +2,81 @@ package main
 
 // Structs
 // -------
-// BufChIter
+// BufIterCh
 //
-// BufChIter - Buf char iterator
+// BufIterCh - Buf char iterator
 // -----------------------------
-// NewBufChIter(buf *Buf) *BufChIter
-// NextChar() (rune, Pos)
-// PrevChar() (rune, Pos)
+// BufIterCh(buf *Buf) *BufIterCh
+// ScanNext() bool
+// ScanPrev() bool
+// Ch() rune
+// Pos() Pos
 //
 
-type BufChIter struct {
-	buf  *Buf
-	bn   *BufNode
-	pos  Pos
-	rstr []rune
-	slen int
+type BufIterCh struct {
+	buf     *Buf
+	bn      *BufNode
+	pos     Pos
+	rstr    []rune
+	rstrLen int
 }
 
-func NewBufChIter(buf *Buf) *BufChIter {
-	bit := &BufChIter{}
+func NewBufIterCh(buf *Buf) *BufIterCh {
+	bit := &BufIterCh{}
 	bit.buf = buf
 	bit.bn = buf.H
 	bit.pos = Pos{-1, 0}
 
 	if bit.bn != nil {
-		bit.rstr, bit.slen = runestr(bit.bn.S)
+		bit.rstr, bit.rstrLen = runestr(bit.bn.S)
 	}
 	return bit
 }
 
-func (bit *BufChIter) NextChar() (rune, Pos) {
+func (bit *BufIterCh) Ch() rune {
+	if bit.pos.X > bit.rstrLen-1 {
+		return 0
+	}
+	return bit.rstr[bit.pos.X]
+}
+func (bit *BufIterCh) Pos() Pos {
+	return bit.pos
+}
+
+func (bit *BufIterCh) ScanNext() bool {
 	if bit.bn == nil {
-		return 0, Pos{0, 0}
+		return false
 	}
 
 	bit.pos.X++
-	if bit.pos.X > bit.slen-1 {
+	if bit.pos.X > bit.rstrLen-1 {
 		bn := bit.bn.Next
 		if bn == nil {
 			bit.pos.X--
-			return 0, Pos{0, 0}
+			return false
 		}
 
 		bit.pos.X = 0
 		bit.pos.Y++
 
-		rstr, slen := runestr(bn.S)
+		rstr, rstrLen := runestr(bn.S)
 		bit.bn = bn
 		bit.rstr = rstr
-		bit.slen = slen
+		bit.rstrLen = rstrLen
 	}
 
-	if bit.slen == 0 {
+	if bit.rstrLen == 0 {
 		// Code should not reach here because buf lines should always
 		// have at least one char '\n'.
-		return bit.NextChar()
+		return bit.ScanNext()
 	}
 
-	return bit.rstr[bit.pos.X], bit.pos
+	return true
 }
 
-func (bit *BufChIter) PrevChar() (rune, Pos) {
+func (bit *BufIterCh) ScanPrev() bool {
 	if bit.bn == nil {
-		return 0, Pos{0, 0}
+		return false
 	}
 
 	bit.pos.X--
@@ -72,23 +84,23 @@ func (bit *BufChIter) PrevChar() (rune, Pos) {
 		bn := bit.bn.Prev
 		if bn == nil {
 			bit.pos.X++
-			return 0, Pos{0, 0}
+			return false
 		}
 
-		rstr, slen := runestr(bn.S)
+		rstr, rstrLen := runestr(bn.S)
 		bit.bn = bn
 		bit.rstr = rstr
-		bit.slen = slen
+		bit.rstrLen = rstrLen
 
-		bit.pos.X = bit.slen - 1
+		bit.pos.X = bit.rstrLen - 1
 		bit.pos.Y--
 	}
 
-	if bit.slen == 0 {
+	if bit.rstrLen == 0 {
 		// Code should not reach here because buf lines should always
 		// have at least one char '\n'.
-		return bit.PrevChar()
+		return bit.ScanPrev()
 	}
 
-	return bit.rstr[bit.pos.X], bit.pos
+	return true
 }

@@ -24,20 +24,17 @@ of the party.`
 	fmt.Println("Buf text:")
 	fmt.Println(buf.Text())
 
-	fmt.Println("BufChIter test:")
-	bit := NewBufChIter(buf)
-	ch, _ := bit.NextChar()
-	for ch != 0 {
-		fmt.Printf("%c", ch)
-		ch, _ = bit.NextChar()
+	fmt.Println("BufIterCh test:")
+	bit := NewBufIterCh(buf)
+	for bit.ScanNext() {
+		fmt.Printf("%c", bit.Ch())
 	}
 	fmt.Println("")
 
-	fmt.Println("BufChIter reverse test:")
-	ch, _ = bit.PrevChar()
-	for ch != 0 {
-		fmt.Printf("%c", ch)
-		ch, _ = bit.PrevChar()
+	fmt.Println("BufIterCh reverse test:")
+	fmt.Printf("%c", bit.Ch())
+	for bit.ScanPrev() {
+		fmt.Printf("%c", bit.Ch())
 	}
 	fmt.Println("")
 
