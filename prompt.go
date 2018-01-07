@@ -64,7 +64,7 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 
 	qOpts := PanelOptions{opts.QText, opts.QAttr, 0}
 	qPanel := NewPanel(offsX, offsY, w, opts.QHeight, qOpts)
-	offsY += qPanel.H
+	offsY += qPanel.Rect.H
 
 	edit := NewEditView(offsX, offsY, w, opts.AnsHeight, 0, opts.AnsAttr, BWAttr, nil)
 	offsY += edit.Rect.H
@@ -74,7 +74,7 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 		hintOpts := PanelOptions{opts.HintText, opts.HintAttr, 0}
 		hintPanel = NewPanel(offsX, offsY, w, opts.HintHeight, hintOpts)
 
-		offsY += hintPanel.H
+		offsY += hintPanel.Rect.H
 	}
 
 	var statusPanel *Panel
@@ -83,7 +83,7 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 		statusOpts := PanelOptions{opts.StatusText, opts.StatusAttr, 0}
 		statusPanel = NewPanel(offsX, offsY, w, opts.StatusHeight, statusOpts)
 
-		offsY += statusPanel.H
+		offsY += statusPanel.Rect.H
 	}
 
 	pr := &Prompt{}
@@ -101,7 +101,7 @@ func (pr *Prompt) SetPrompt(s string) {
 	pr.QPanel.SetText(s)
 }
 func (pr *Prompt) GetPrompt() string {
-	return pr.QPanel.GetText()
+	return pr.QPanel.Text()
 }
 func (pr *Prompt) SetEdit(s string) {
 	pr.Edit.SetText(s)
@@ -116,7 +116,7 @@ func (pr *Prompt) SetHint(s string) {
 }
 func (pr *Prompt) GetHint() string {
 	if pr.HintPanel != nil {
-		return pr.HintPanel.GetText()
+		return pr.HintPanel.Text()
 	}
 	return ""
 }
@@ -127,7 +127,7 @@ func (pr *Prompt) SetStatus(s string) {
 }
 func (pr *Prompt) GetStatus() string {
 	if pr.StatusPanel != nil {
-		return pr.StatusPanel.GetText()
+		return pr.StatusPanel.Text()
 	}
 	return ""
 }
@@ -141,12 +141,12 @@ func (pr *Prompt) Clear() {
 func (pr *Prompt) contentRect() Rect {
 	rect := pr.Rect
 
-	rect.H = pr.QPanel.H + pr.Edit.Rect.H
+	rect.H = pr.QPanel.Rect.H + pr.Edit.Rect.H
 	if pr.HintPanel != nil && pr.GetHint() != "" {
-		rect.H += pr.HintPanel.H
+		rect.H += pr.HintPanel.Rect.H
 	}
 	if pr.StatusPanel != nil && pr.GetStatus() != "" {
-		rect.H += pr.StatusPanel.H
+		rect.H += pr.StatusPanel.Rect.H
 	}
 
 	if pr.Mode&PromptBorder != 0 {

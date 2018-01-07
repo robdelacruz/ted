@@ -6,8 +6,7 @@ import (
 
 type Panel struct {
 	Rect
-	//	*Buf
-	//	*TextBlk
+	*Buf
 	Opts PanelOptions
 }
 
@@ -27,13 +26,8 @@ func NewPanel(x, y, w, h int, opts PanelOptions) *Panel {
 	p := &Panel{}
 	p.Rect = NewRect(x, y, w, h)
 	p.Opts = opts
-	//	p.Buf = NewBuf()
-	//	p.Buf.SetText(opts.Text)
-	if opts.Mode&PanelBorder != 0 {
-		w -= 2
-	}
-	//	p.TextBlk = NewTextBlk(w, 0)
-	p.SyncText()
+	p.Buf = NewBuf()
+	p.Buf.SetText(opts.Text)
 
 	return p
 }
@@ -43,15 +37,7 @@ func (p *Panel) SetPos(x, y int) {
 	p.Y = y
 }
 
-func (p *Panel) Draw() {
-	clearRect(p.Rect, p.Opts.Attr)
-	if p.Opts.Mode&PanelBorder != 0 {
-		drawBox(p.Rect.X, p.Rect.Y, p.Rect.W, p.Rect.H, p.Opts.Attr)
-	}
-
-	p.drawText()
-}
-func (p *Panel) drawText() {
+func (p *Panel) contentRect() Rect {
 	rect := p.Rect
 	if p.Opts.Mode&PanelBorder != 0 {
 		rect.X++
@@ -59,20 +45,35 @@ func (p *Panel) drawText() {
 		rect.W -= 2
 		rect.H -= 2
 	}
+	return rect
+}
 
-	//	p.TextBlk.PrintToArea(rect, p.Opts.Attr)
+func (p *Panel) Draw() {
+	clearRect(p.Rect, p.Opts.Attr)
+	if p.Opts.Mode&PanelBorder != 0 {
+		drawBox(p.Rect.X, p.Rect.Y, p.Rect.W, p.Rect.H, p.Opts.Attr)
+	}
+
+	p.drawText(p.contentRect())
+}
+func (p *Panel) drawText(rect Rect) {
+	bit := NewBufIterWl(p.Buf, rect.W)
+	i := 0
+	for bit.ScanNext() {
+		if i > rect.H-1 {
+			break
+		}
+		sline := bit.Text()
+		print(sline, rect.X, rect.Y+i, p.Opts.Attr)
+		i++
+	}
 }
 
 func (p *Panel) SetText(s string) {
-	//	p.Buf.SetText(s)
-	p.SyncText()
+	p.Buf.SetText(s)
 }
-func (p *Panel) GetText() string {
-	//	return p.Buf.Text()
-	return ""
-}
-func (p *Panel) SyncText() {
-	//	p.TextBlk.FillWithBuf(p.Buf)
+func (p *Panel) Text() string {
+	return p.Buf.Text()
 }
 
 func (p *Panel) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {

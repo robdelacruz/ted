@@ -32,6 +32,11 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 	v.ContentAttr = contentAttr
 	v.StatusAttr = statusAttr
 
+	if buf == nil {
+		buf = NewBuf()
+	}
+	v.Buf = buf
+
 	return v
 }
 
@@ -56,19 +61,29 @@ func (v *EditView) Draw() {
 		drawBox(v.Rect.X, v.Rect.Y, v.Rect.W, v.Rect.H, boxAttr)
 	}
 
-	v.drawText()
+	contentRect := v.contentRect()
+	v.drawText(contentRect)
 
 	if v.Mode&EditViewStatusLine != 0 {
-		v.drawStatus()
+		v.drawStatus(contentRect)
 	}
 }
 
-func (v *EditView) drawText() {
+func (v *EditView) drawText(rect Rect) {
+	bit := NewBufIterWl(v.Buf, rect.W)
+	i := 0
+	for bit.ScanNext() {
+		if i > rect.H-1 {
+			break
+		}
+		sline := bit.Text()
+		print(sline, rect.X, rect.Y+i, v.ContentAttr)
+		i++
+	}
 }
 
 // Draw status line one row below content area.
-func (v *EditView) drawStatus() {
-	rect := v.contentRect()
+func (v *EditView) drawStatus(rect Rect) {
 	left := rect.X
 	width := rect.W
 	y := rect.Y + rect.H
@@ -101,9 +116,10 @@ func (v *EditView) ResetCur() {
 }
 
 func (v *EditView) SetText(s string) {
+	v.Buf.SetText(s)
 }
 
-func (v *EditView) GetText() string {
+func (v *EditView) Text() string {
 	return v.Buf.Text()
 }
 
