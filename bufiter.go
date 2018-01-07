@@ -4,8 +4,8 @@ package main
 // -------
 // BufChIter
 //
-// BufChIter
-// -------
+// BufChIter - Buf char iterator
+// -----------------------------
 // NewBufChIter(buf *Buf) *BufChIter
 // NextChar() (rune, Pos)
 // PrevChar() (rune, Pos)
@@ -87,7 +87,7 @@ func (bit *BufChIter) PrevChar() (rune, Pos) {
 	if bit.slen == 0 {
 		// Code should not reach here because buf lines should always
 		// have at least one char '\n'.
-		return bit.NextChar()
+		return bit.PrevChar()
 	}
 
 	return bit.rstr[bit.pos.X], bit.pos

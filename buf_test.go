@@ -43,3 +43,23 @@ of the party.`
 
 	fmt.Printf("Number of nodes: %d\n", buf.NumNodes())
 }
+
+func TestBufIterWl(t *testing.T) {
+	buf := NewBuf()
+	p := `Now is the time for all good men to come to the aid of the party. The quick brown fox jumps over the lazy dog.`
+	buf.AppendLine(p)
+	buf.AppendLine("")
+	buf.AppendLine(p)
+
+	fmt.Println("BufIterWl test:")
+	bit := NewBufIterWl(buf, 40)
+	for bit.ScanNext() {
+		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+	}
+
+	fmt.Println("BufIterWl reverse test:")
+	fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+	for bit.ScanPrev() {
+		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+	}
+}
