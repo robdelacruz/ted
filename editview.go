@@ -143,6 +143,20 @@ func (v *EditView) Text() string {
 	return v.Buf.Text()
 }
 
+func (v *EditView) navCurWrapline(wlFn func() bool) {
+	if v.bitWl.Seek(v.Cur) {
+		curWraplineCol := v.Cur.X - v.bitWl.Pos().X
+		if wlFn() {
+			v.Cur.Y = v.bitWl.Pos().Y
+			v.Cur.X = v.bitWl.Pos().X + curWraplineCol
+			eolX := v.bitWl.Pos().X + rlen(v.bitWl.Text()) - 1
+			if v.Cur.X > eolX {
+				v.Cur.X = eolX
+			}
+		}
+	}
+}
+
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	var bufChanged bool
 	var c rune
@@ -166,7 +180,9 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 			v.Cur = v.bitCur.Pos()
 		}
 	case tb.KeyArrowUp:
+		v.navCurWrapline(v.bitWl.ScanPrev)
 	case tb.KeyArrowDown:
+		v.navCurWrapline(v.bitWl.ScanNext)
 
 	// Nav word/line
 	case tb.KeyCtrlP:
