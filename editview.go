@@ -15,7 +15,8 @@ type EditView struct {
 	Mode        EditViewMode
 	ContentAttr TermAttr
 	StatusAttr  TermAttr
-	BufPos      Pos
+	Cur         Pos
+	bitCur      *BufIterCh
 }
 
 type EditViewMode uint
@@ -36,7 +37,9 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 		buf = NewBuf()
 	}
 	v.Buf = buf
+	v.bitCur = NewBufIterCh(v.Buf)
 
+	v.Clear()
 	return v
 }
 
@@ -67,6 +70,8 @@ func (v *EditView) Draw() {
 	if v.Mode&EditViewStatusLine != 0 {
 		v.drawStatus(contentRect)
 	}
+
+	v.drawCur(contentRect)
 }
 
 func (v *EditView) drawText(rect Rect) {
@@ -102,17 +107,23 @@ func (v *EditView) drawStatus(rect Rect) {
 	}
 	print(bufName, left, y, v.StatusAttr)
 
-	// Buf pos y,x
-	sBufPos := fmt.Sprintf("%d,%d", v.BufPos.Y+1, v.BufPos.X+1)
-	print(sBufPos, left+width-(width/3), y, v.StatusAttr)
+	// Cur pos y,x
+	sCurPos := fmt.Sprintf("%d,%d", v.Cur.Y+1, v.Cur.X+1)
+	print(sCurPos, left+width-(width/3), y, v.StatusAttr)
+}
+
+func (v *EditView) drawCur(rect Rect) {
+	tb.SetCursor(rect.X+v.Cur.X, rect.Y+v.Cur.Y)
 }
 
 func (v *EditView) Clear() {
 	v.Buf.Clear()
+	v.Buf.AppendLine("")
 	v.ResetCur()
 }
 func (v *EditView) ResetCur() {
-	v.BufPos = Pos{0, 0}
+	v.Cur = Pos{0, 0}
+	v.bitCur.Seek(v.Cur)
 }
 
 func (v *EditView) SetText(s string) {
@@ -133,6 +144,12 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	// Nav single char
 	case tb.KeyArrowLeft:
 	case tb.KeyArrowRight:
+		if v.bitCur.Pos() != v.Cur {
+			v.bitCur.Seek(v.Cur)
+		}
+		if v.bitCur.ScanNext() {
+			v.Cur = v.bitCur.Pos()
+		}
 	case tb.KeyArrowUp:
 	case tb.KeyArrowDown:
 
@@ -181,7 +198,7 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	// Char entered
 	if c != 0 {
-		v.BufPos = v.Buf.InsChar(v.BufPos, c)
+		v.Cur = v.Buf.InsChar(v.Cur, c)
 		bufChanged = true
 	}
 

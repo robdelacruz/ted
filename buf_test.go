@@ -17,9 +17,7 @@ for all good men
 to come to the aid
 of the party.`
 
-	//	buf.SetText(text)
-	buf.InsText(Pos{5, 2}, text)
-	buf.DelChars(Pos{0, 2}, 5)
+	buf.SetText(text)
 
 	fmt.Println("Buf text:")
 	fmt.Println(buf.Text())
@@ -37,6 +35,18 @@ of the party.`
 		fmt.Printf("%c", bit.Ch())
 	}
 	fmt.Println("")
+
+	fmt.Println("BufIterCh seek test:")
+	fmt.Printf("Seek (5,2): %v\n", bit.Seek(Pos{5, 2}))
+
+	// Nonexistent, should be ignored by bufiterch.
+	fmt.Printf("Seek (8,2): %v\n", bit.Seek(Pos{8, 2}))
+	fmt.Printf("Seek (0,100): %v\n", bit.Seek(Pos{0, 100}))
+
+	fmt.Printf("%c", bit.Ch())
+	for bit.ScanNext() {
+		fmt.Printf("%c", bit.Ch())
+	}
 
 	fmt.Printf("Number of nodes: %d\n", buf.NumNodes())
 }
@@ -59,4 +69,12 @@ func TestBufIterWl(t *testing.T) {
 	for bit.ScanPrev() {
 		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
 	}
+
+	bit.Reset()
+	fmt.Println("BufIterWl forward again:")
+	fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+	for bit.ScanNext() {
+		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+	}
+
 }

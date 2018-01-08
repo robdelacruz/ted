@@ -1,5 +1,7 @@
 package main
 
+import ()
+
 // Structs
 // -------
 // BufIterCh
@@ -7,10 +9,14 @@ package main
 // BufIterCh - Buf char iterator
 // -----------------------------
 // BufIterCh(buf *Buf) *BufIterCh
-// ScanNext() bool
-// ScanPrev() bool
+// Reset()
 // Ch() rune
 // Pos() Pos
+// ScanNext() bool
+// ScanPrev() bool
+// ScanDown() bool
+// ScanUp() bool
+// Seek(pos Pos)
 //
 
 type BufIterCh struct {
@@ -24,13 +30,17 @@ type BufIterCh struct {
 func NewBufIterCh(buf *Buf) *BufIterCh {
 	bit := &BufIterCh{}
 	bit.buf = buf
-	bit.bn = buf.H
-	bit.pos = Pos{-1, 0}
+	bit.Reset()
 
+	return bit
+}
+
+func (bit *BufIterCh) Reset() {
+	bit.pos = Pos{-1, 0}
+	bit.bn = bit.buf.H
 	if bit.bn != nil {
 		bit.rstr, bit.rstrLen = runestr(bit.bn.S)
 	}
-	return bit
 }
 
 func (bit *BufIterCh) Ch() rune {
@@ -101,6 +111,71 @@ func (bit *BufIterCh) ScanPrev() bool {
 		// have at least one char '\n'.
 		return bit.ScanPrev()
 	}
+
+	return true
+}
+
+func (bit *BufIterCh) ScanDown() bool {
+	if bit.bn == nil {
+		return false
+	}
+
+	// Get next line.
+	bn := bit.bn.Next
+	if bn == nil {
+		return false
+	}
+	rstr, rstrLen := runestr(bn.S)
+	if bit.pos.X > rstrLen-1 {
+		bit.pos.X = rstrLen - 1
+	}
+	bit.pos.Y++
+
+	bit.bn = bn
+	bit.rstr = rstr
+	bit.rstrLen = rstrLen
+
+	return true
+}
+
+func (bit *BufIterCh) ScanUp() bool {
+	if bit.bn == nil {
+		return false
+	}
+
+	// Get prev line.
+	bn := bit.bn.Prev
+	if bn == nil {
+		return false
+	}
+	rstr, rstrLen := runestr(bn.S)
+	if bit.pos.X > rstrLen-1 {
+		bit.pos.X = rstrLen - 1
+	}
+	bit.pos.Y--
+
+	bit.bn = bn
+	bit.rstr = rstr
+	bit.rstrLen = rstrLen
+
+	return true
+}
+
+func (bit *BufIterCh) Seek(pos Pos) bool {
+	bn := bit.buf.NodeFromY(pos.Y)
+	if bn == nil {
+		return false
+	}
+
+	rstr, rstrLen := runestr(bn.S)
+	if pos.X > rstrLen-1 {
+		return false
+	}
+
+	bit.bn = bn
+	bit.rstr = rstr
+	bit.rstrLen = rstrLen
+	bit.pos = pos
 
 	return true
 }

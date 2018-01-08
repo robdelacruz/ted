@@ -11,10 +11,11 @@ package main
 // BufIterWl - Buf wraplines iterator
 // ----------------------------------
 // NewBufIterWl(buf *Buf, wlMaxLen int) *BufWlIter
-// ScanNext() bool
-// ScanPrev() bool
+// Reset()
 // Text() string
 // Pos() Pos
+// ScanNext() bool
+// ScanPrev() bool
 //
 
 import (
@@ -44,13 +45,18 @@ func NewBufIterWl(buf *Buf, wlMaxLen int) *BufIterWl {
 	bit := &BufIterWl{}
 	bit.buf = buf
 	bit.wlMaxLen = wlMaxLen
-	bit.bn = buf.H
-	bit.pos = Pos{-1, 0}
+	bit.Reset()
+	return bit
+}
 
+func (bit *BufIterWl) Reset() {
+	bit.pos = Pos{-1, 0}
+	bit.bn = bit.buf.H
 	if bit.bn != nil {
 		bit.rstr, bit.rstrLen = runestr(bit.bn.S)
 	}
-	return bit
+	bit.wlnodeH = nil
+	bit.wlnode = nil
 }
 
 func (bit *BufIterWl) Text() string {
@@ -67,7 +73,7 @@ func (bit *BufIterWl) Pos() Pos {
 }
 
 func (bit *BufIterWl) ScanPrev() bool {
-	if bit.wlnode == nil {
+	if bit.wlnode == nil || bit.wlnode.Prev == nil {
 		return false
 	}
 	bit.wlnode = bit.wlnode.Prev
@@ -75,9 +81,18 @@ func (bit *BufIterWl) ScanPrev() bool {
 }
 
 func (bit *BufIterWl) ScanNext() bool {
+	// If wraplines were iterated on previously, no need to rescan.
 	if bit.bn == nil {
+		if bit.wlnode != nil && bit.wlnode.Next != nil {
+			bit.wlnode = bit.wlnode.Next
+			return true
+		}
 		return false
 	}
+
+	//	if bit.bn == nil {
+	//		return false
+	//	}
 
 	bit.pos.X++
 	if bit.pos.X > bit.rstrLen-1 {
