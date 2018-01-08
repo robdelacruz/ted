@@ -44,3 +44,31 @@ func TestWidgetPanel(t *testing.T) {
 	tb.Flush()
 	WaitKBEvent()
 }
+
+func TestWidgetEditView(t *testing.T) {
+	err := tb.Init()
+	if err != nil {
+		panic(err)
+	}
+	defer tb.Close()
+
+	buf := NewBuf()
+	err = buf.Load("sample.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	fg := TermAttr{tb.ColorGreen, tb.ColorBlack}
+	bg := reverseAttr(fg)
+	edit := NewEditView(45, 2, 35, 20, EditViewBorder|EditViewStatusLine, fg, bg, buf)
+	edit.Draw()
+
+	fg = TermAttr{tb.ColorBlack, tb.ColorWhite}
+	bg = reverseAttr(fg)
+	edit2 := NewEditView(5, 7, 55, 35, EditViewBorder|EditViewStatusLine, fg, bg, buf)
+	edit2.Draw()
+
+	tb.Flush()
+	e := WaitKBEvent()
+	edit.HandleEvent(&e)
+}

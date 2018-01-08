@@ -16,7 +16,6 @@ package main
 // Pos() Pos
 // ScanNext() bool
 // ScanPrev() bool
-// SeekBof()
 // Seek(pos Pos) bool
 // WrapLineIndex() int
 //
@@ -34,7 +33,6 @@ type BufIterWl struct {
 	rstr     []rune
 	rstrLen  int
 	pos      Pos
-	wlnodeH  *wlNode
 	wlnode   *wlNode
 }
 
@@ -59,7 +57,6 @@ func (bit *BufIterWl) Reset() {
 	if bit.bn != nil {
 		bit.rstr, bit.rstrLen = runestr(bit.bn.S)
 	}
-	bit.wlnodeH = nil
 	bit.wlnode = nil
 }
 
@@ -93,10 +90,6 @@ func (bit *BufIterWl) ScanNext() bool {
 		}
 		return false
 	}
-
-	//	if bit.bn == nil {
-	//		return false
-	//	}
 
 	bit.pos.X++
 	if bit.pos.X > bit.rstrLen-1 {
@@ -150,14 +143,12 @@ func (bit *BufIterWl) ScanNext() bool {
 		Prev: bit.wlnode,
 	}
 
-	if bit.wlnodeH == nil {
-		bit.wlnodeH = newWlNode
-	}
 	if bit.wlnode == nil {
 		bit.wlnode = newWlNode
+	} else {
+		bit.wlnode.Next = newWlNode
+		bit.wlnode = newWlNode
 	}
-	bit.wlnode.Next = newWlNode
-	bit.wlnode = newWlNode
 
 	return true
 }
@@ -190,7 +181,7 @@ func readNextWord(rstr []rune, rstrLen, startX int) (word string, endwX int) {
 	return b.String(), x - 1
 }
 
-func (bit *BufIterWl) SeekBof() {
+func (bit *BufIterWl) seekFirstLine() {
 	for bit.ScanPrev() {
 		// Keep going back until we hit the start.
 	}
@@ -201,7 +192,7 @@ func (bit *BufIterWl) logTextPos() {
 }
 
 func (bit *BufIterWl) Seek(pos Pos) bool {
-	bit.SeekBof()
+	bit.seekFirstLine()
 
 	// Seek to wrapline row.
 	for bit.Pos().Y < pos.Y {

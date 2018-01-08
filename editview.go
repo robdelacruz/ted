@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	tb "github.com/nsf/termbox-go"
@@ -17,6 +18,7 @@ type EditView struct {
 	StatusAttr  TermAttr
 	Cur         Pos
 	bitCur      *BufIterCh
+	bitWl       *BufIterWl
 }
 
 type EditViewMode uint
@@ -38,8 +40,8 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 	}
 	v.Buf = buf
 	v.bitCur = NewBufIterCh(v.Buf)
+	v.bitWl = NewBufIterWl(v.Buf, v.contentRect().W)
 
-	v.Clear()
 	return v
 }
 
@@ -74,14 +76,18 @@ func (v *EditView) Draw() {
 	v.drawCur(contentRect)
 }
 
+func logln(s string) {
+	log.Println(s)
+}
+
 func (v *EditView) drawText(rect Rect) {
-	bit := NewBufIterWl(v.Buf, rect.W)
+	v.bitWl.Reset()
 	i := 0
-	for bit.ScanNext() {
+	for v.bitWl.ScanNext() {
 		if i > rect.H-1 {
 			break
 		}
-		sline := bit.Text()
+		sline := v.bitWl.Text()
 		print(sline, rect.X, rect.Y+i, v.ContentAttr)
 		i++
 	}
@@ -113,14 +119,17 @@ func (v *EditView) drawStatus(rect Rect) {
 }
 
 func (v *EditView) drawCur(rect Rect) {
-	tb.SetCursor(rect.X+v.Cur.X, rect.Y+v.Cur.Y)
+	var contentCurPos Pos
+	if v.bitWl.Seek(v.Cur) {
+		contentCurPos.Y = v.bitWl.WrapLineIndex()
+		contentCurPos.X = v.Cur.X - v.bitWl.Pos().X
+	}
+
+	if contentCurPos.Y < rect.H && contentCurPos.X < rect.W {
+		tb.SetCursor(rect.X+contentCurPos.X, rect.Y+contentCurPos.Y)
+	}
 }
 
-func (v *EditView) Clear() {
-	v.Buf.Clear()
-	v.Buf.AppendLine("")
-	v.ResetCur()
-}
 func (v *EditView) ResetCur() {
 	v.Cur = Pos{0, 0}
 	v.bitCur.Seek(v.Cur)
@@ -143,6 +152,12 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	// Nav single char
 	case tb.KeyArrowLeft:
+		if v.bitCur.Pos() != v.Cur {
+			v.bitCur.Seek(v.Cur)
+		}
+		if v.bitCur.ScanPrev() {
+			v.Cur = v.bitCur.Pos()
+		}
 	case tb.KeyArrowRight:
 		if v.bitCur.Pos() != v.Cur {
 			v.bitCur.Seek(v.Cur)

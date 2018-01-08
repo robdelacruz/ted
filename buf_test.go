@@ -76,7 +76,6 @@ func TestBufIterWl(t *testing.T) {
 	}
 
 	fmt.Println("BufIterWl forward again:")
-	bit.Reset()
 	fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
 	for bit.ScanNext() {
 		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
@@ -85,11 +84,11 @@ func TestBufIterWl(t *testing.T) {
 	fmt.Println("BufIterWl seek test:")
 	seekPos := Pos{3, 100}
 	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
-	seekPos = Pos{500, 2}
+	seekPos = Pos{500, 5}
 	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
-	seekPos = Pos{76, 2}
+	seekPos = Pos{76, 6}
 	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
-	seekPos = Pos{45, 2}
+	seekPos = Pos{320, 8}
 	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
 	fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
 	for bit.ScanNext() {
