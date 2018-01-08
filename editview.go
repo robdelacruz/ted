@@ -143,6 +143,15 @@ func (v *EditView) Text() string {
 	return v.Buf.Text()
 }
 
+func (v *EditView) navCurChar(chFn func() bool) {
+	if v.bitCur.Pos() != v.Cur {
+		v.bitCur.Seek(v.Cur)
+	}
+	if chFn() {
+		v.Cur = v.bitCur.Pos()
+	}
+}
+
 func (v *EditView) navCurWrapline(wlFn func() bool) {
 	if v.bitWl.Seek(v.Cur) {
 		curWraplineCol := v.Cur.X - v.bitWl.Pos().X
@@ -166,19 +175,9 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	// Nav single char
 	case tb.KeyArrowLeft:
-		if v.bitCur.Pos() != v.Cur {
-			v.bitCur.Seek(v.Cur)
-		}
-		if v.bitCur.ScanPrev() {
-			v.Cur = v.bitCur.Pos()
-		}
+		v.navCurChar(v.bitCur.ScanPrev)
 	case tb.KeyArrowRight:
-		if v.bitCur.Pos() != v.Cur {
-			v.bitCur.Seek(v.Cur)
-		}
-		if v.bitCur.ScanNext() {
-			v.Cur = v.bitCur.Pos()
-		}
+		v.navCurChar(v.bitCur.ScanNext)
 	case tb.KeyArrowUp:
 		v.navCurWrapline(v.bitWl.ScanPrev)
 	case tb.KeyArrowDown:
@@ -213,12 +212,22 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	// Delete text
 	case tb.KeyDelete:
+		v.Cur = v.Buf.DelChar(v.Cur)
 	case tb.KeyBackspace:
 		fallthrough
 	case tb.KeyBackspace2:
+		if v.bitCur.Pos() != v.Cur {
+			v.bitCur.Seek(v.Cur)
+		}
+		if v.bitCur.ScanPrev() {
+			v.Cur = v.bitCur.Pos()
+			v.Cur = v.Buf.DelChar(v.Cur)
+		}
 
 	// Text entry
 	case tb.KeyEnter:
+		v.Cur = v.Buf.InsLF(v.Cur)
+		bufChanged = true
 	case tb.KeyTab:
 		c = '\t'
 	case tb.KeySpace:
