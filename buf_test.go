@@ -58,6 +58,11 @@ func TestBufIterWl(t *testing.T) {
 	buf.AppendLine("")
 	buf.AppendLine(p)
 
+	err := buf.Load("sample.txt")
+	if err != nil {
+		panic(err)
+	}
+
 	fmt.Println("BufIterWl test:")
 	bit := NewBufIterWl(buf, 40)
 	for bit.ScanNext() {
@@ -70,8 +75,22 @@ func TestBufIterWl(t *testing.T) {
 		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
 	}
 
-	bit.Reset()
 	fmt.Println("BufIterWl forward again:")
+	bit.Reset()
+	fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+	for bit.ScanNext() {
+		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+	}
+
+	fmt.Println("BufIterWl seek test:")
+	seekPos := Pos{3, 100}
+	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
+	seekPos = Pos{500, 2}
+	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
+	seekPos = Pos{76, 2}
+	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
+	seekPos = Pos{45, 2}
+	fmt.Printf("Seek %v result: %v\n", seekPos, bit.Seek(seekPos))
 	fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
 	for bit.ScanNext() {
 		fmt.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())

@@ -16,10 +16,14 @@ package main
 // Pos() Pos
 // ScanNext() bool
 // ScanPrev() bool
+// SeekBof()
+// Seek(pos Pos) bool
+// WrapLineIndex() int
 //
 
 import (
 	"bytes"
+	"log"
 	"unicode"
 )
 
@@ -184,4 +188,55 @@ func readNextWord(rstr []rune, rstrLen, startX int) (word string, endwX int) {
 	}
 
 	return b.String(), x - 1
+}
+
+func (bit *BufIterWl) SeekBof() {
+	for bit.ScanPrev() {
+		// Keep going back until we hit the start.
+	}
+}
+
+func (bit *BufIterWl) logTextPos() {
+	log.Printf("(%2d,%2d) '%s'\n", bit.Pos().X, bit.Pos().Y, bit.Text())
+}
+
+func (bit *BufIterWl) Seek(pos Pos) bool {
+	bit.SeekBof()
+
+	// Seek to wrapline row.
+	for bit.Pos().Y < pos.Y {
+		if !bit.ScanNext() {
+			break
+		}
+	}
+	if pos.Y != bit.Pos().Y {
+		return false
+	}
+
+	// Seek to col within wrapline
+	for pos.Y == bit.Pos().Y && (bit.Pos().X+rlen(bit.Text())-1) < pos.X {
+		if !bit.ScanNext() {
+			break
+		}
+	}
+	bitPos := bit.Pos()
+	wlEndX := bitPos.X + rlen(bit.Text()) - 1
+	if pos.Y == bitPos.Y && pos.X >= bitPos.X && pos.X <= wlEndX {
+		// pos is within wrapline row.
+		return true
+	}
+
+	return false
+}
+
+// Return zero-based index to current wrapline.
+// Ex. -1 = BOF, 0 = first wrapline, 1 = second wrapline, etc.
+func (bit *BufIterWl) WrapLineIndex() int {
+	wlnode := bit.wlnode
+	i := -1
+	for wlnode != nil {
+		wlnode = wlnode.Prev
+		i++
+	}
+	return i
 }

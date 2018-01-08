@@ -16,7 +16,7 @@ import ()
 // ScanPrev() bool
 // ScanDown() bool
 // ScanUp() bool
-// Seek(pos Pos)
+// Seek(pos Pos) bool
 //
 
 type BufIterCh struct {
