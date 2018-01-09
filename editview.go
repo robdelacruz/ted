@@ -19,6 +19,7 @@ type EditView struct {
 	Cur         Pos
 	bitCur      *BufIterCh
 	bitWl       *BufIterWl
+	ViewTop     Pos
 }
 
 type EditViewMode uint
@@ -59,6 +60,22 @@ func (v *EditView) contentRect() Rect {
 	return rect
 }
 
+func (v *EditView) contentRange() (startPos, endPos Pos) {
+	v.bitWl.Seek(v.ViewTop)
+	startPos = v.bitWl.Pos()
+
+	contentRect := v.contentRect()
+	for i := 1; i < contentRect.H; i++ {
+		if !v.bitWl.ScanNext() {
+			break
+		}
+	}
+	endPos = v.bitWl.Pos()
+	endPos.X += rlen(v.bitWl.Text()) - 1
+
+	return startPos, endPos
+}
+
 func (v *EditView) Draw() {
 	clearRect(v.Rect, v.ContentAttr)
 	if v.Mode&EditViewBorder != 0 {
@@ -81,8 +98,15 @@ func logln(s string) {
 }
 
 func (v *EditView) drawText(rect Rect) {
-	v.bitWl.Reset()
+	v.bitWl.Seek(v.ViewTop)
 	i := 0
+
+	// First wrapline.
+	sline := v.bitWl.Text()
+	print(sline, rect.X, rect.Y+i, v.ContentAttr)
+	i++
+
+	// Succeeding wraplines until bottommost content row.
 	for v.bitWl.ScanNext() {
 		if i > rect.H-1 {
 			break
@@ -120,8 +144,15 @@ func (v *EditView) drawStatus(rect Rect) {
 
 func (v *EditView) drawCur(rect Rect) {
 	var contentCurPos Pos
-	if v.bitWl.Seek(v.Cur) {
-		contentCurPos.Y = v.bitWl.WrapLineIndex()
+
+	v.bitWl.Seek(v.ViewTop)
+	wliViewTop := v.bitWl.WrapLineIndex()
+
+	v.bitWl.Seek(v.Cur)
+	wliCur := v.bitWl.WrapLineIndex()
+
+	if wliCur >= wliViewTop {
+		contentCurPos.Y = wliCur - wliViewTop
 		contentCurPos.X = v.Cur.X - v.bitWl.Pos().X
 	}
 
@@ -149,6 +180,8 @@ func (v *EditView) navCurChar(chFn func() bool) {
 	}
 	if chFn() {
 		v.Cur = v.bitCur.Pos()
+
+		v.fitViewTopToCur()
 	}
 }
 
@@ -162,8 +195,40 @@ func (v *EditView) navCurWrapline(wlFn func() bool) {
 			if v.Cur.X > eolX {
 				v.Cur.X = eolX
 			}
+
+			v.fitViewTopToCur()
 		}
 	}
+}
+
+func (v *EditView) fitViewTopToCur() {
+	contentStartPos, contentEndPos := v.contentRange()
+	cmpCurRange := cmpPosRange(v.Cur, contentStartPos, contentEndPos)
+	if cmpCurRange < 0 {
+		v.ScrollN(-1)
+	} else if cmpCurRange > 0 {
+		v.ScrollN(1)
+	}
+}
+
+func (v *EditView) ScrollN(nWraplines int) {
+	if nWraplines == 0 {
+		return
+	}
+
+	// negative nWraplines means ScanPrev()
+	// positive nWrapLines means ScanNext()
+	scanfn := v.bitWl.ScanNext
+	if nWraplines < 0 {
+		scanfn = v.bitWl.ScanPrev
+		nWraplines = -nWraplines
+	}
+
+	v.bitWl.Seek(v.ViewTop)
+	for i := 0; i < nWraplines; i++ {
+		scanfn()
+	}
+	v.ViewTop = v.bitWl.Pos()
 }
 
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
@@ -213,6 +278,7 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	// Delete text
 	case tb.KeyDelete:
 		v.Cur = v.Buf.DelChar(v.Cur)
+		bufChanged = true
 	case tb.KeyBackspace:
 		fallthrough
 	case tb.KeyBackspace2:
@@ -223,6 +289,7 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 			v.Cur = v.bitCur.Pos()
 			v.Cur = v.Buf.DelChar(v.Cur)
 		}
+		bufChanged = true
 
 	// Text entry
 	case tb.KeyEnter:
@@ -243,6 +310,9 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	}
 
 	if bufChanged {
+		v.bitCur.Reset()
+		v.bitWl.Reset()
+		v.fitViewTopToCur()
 	}
 
 	return v, WidgetEventNone

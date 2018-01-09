@@ -37,8 +37,9 @@ type BufIterWl struct {
 }
 
 type wlNode struct {
-	S string
-	Pos
+	S    string
+	Pos  Pos
+	bn   *BufNode
 	Next *wlNode
 	Prev *wlNode
 }
@@ -82,12 +83,15 @@ func (bit *BufIterWl) ScanPrev() bool {
 }
 
 func (bit *BufIterWl) ScanNext() bool {
-	// If wraplines were iterated on previously, no need to rescan.
+	// If next wrapline was iterated on previously.
+	if bit.wlnode != nil && bit.wlnode.Next != nil {
+		bit.wlnode = bit.wlnode.Next
+		bit.bn = bit.wlnode.bn
+		bit.rstr, bit.rstrLen = runestr(bit.bn.S)
+		return true
+	}
+
 	if bit.bn == nil {
-		if bit.wlnode != nil && bit.wlnode.Next != nil {
-			bit.wlnode = bit.wlnode.Next
-			return true
-		}
 		return false
 	}
 
@@ -139,6 +143,7 @@ func (bit *BufIterWl) ScanNext() bool {
 	newWlNode := &wlNode{
 		S:    b.String(),
 		Pos:  wlStartPos,
+		bn:   bit.bn,
 		Next: nil,
 		Prev: bit.wlnode,
 	}

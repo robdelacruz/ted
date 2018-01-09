@@ -150,3 +150,22 @@ func parseWords(s string) []string {
 
 	return words
 }
+
+// -1 pos is before posStart
+// +1 pos is after posEnd
+//  0 pos is within posStart, posEnd
+func cmpPosRange(pos, posStart, posEnd Pos) int {
+	if pos.Y < posStart.Y {
+		return -1
+	}
+	if pos.Y > posEnd.Y {
+		return 1
+	}
+	if pos.Y == posStart.Y && pos.X < posStart.X {
+		return -1
+	}
+	if pos.Y == posEnd.Y && pos.X > posEnd.X {
+		return 1
+	}
+	return 0
+}

@@ -218,7 +218,6 @@ func (pr *Prompt) Draw() {
 	if pr.Mode&PromptBorder != 0 {
 		outlineRect := pr.outlineRect()
 		drawBox(outlineRect.X, outlineRect.Y, outlineRect.W, outlineRect.H, BWAttr)
-		_log.Printf("outlineRect = %s\n", outlineRect)
 	}
 }
 
