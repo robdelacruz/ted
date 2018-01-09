@@ -1,5 +1,40 @@
 package main
 
+// Structs
+// -------
+// Prompt
+// PromptOptions
+//
+// Consts
+// ------
+// PromptBorder
+// PromptOK
+// PromptCancel
+//
+// Functions
+// ---------
+//
+// Prompt
+// ------
+// NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt
+// contentRect() Rect
+// outlineRect() Rect
+// Height() int
+//
+// SetPrompt(s string)
+// GetPrompt() string
+// SetEdit(s string)
+// GetEditText() string
+// SetHint(s string)
+// GetHint() string
+// SetStatus(s string)
+// GetStatus() string
+// Clear()
+//
+// Draw()
+// HandleEvent(e *tb.Event) (Widget, WidgetEventID)
+//
+
 import (
 	tb "github.com/nsf/termbox-go"
 )
@@ -97,6 +132,46 @@ func NewPrompt(x, y, w int, mode PromptMode, opts *PromptOptions) *Prompt {
 	return pr
 }
 
+func (pr *Prompt) contentRect() Rect {
+	rect := pr.Rect
+
+	rect.H = pr.QPanel.Rect.H + pr.Edit.Rect.H
+	if pr.HintPanel != nil && pr.GetHint() != "" {
+		rect.H += pr.HintPanel.Rect.H
+	}
+	if pr.StatusPanel != nil && pr.GetStatus() != "" {
+		rect.H += pr.StatusPanel.Rect.H
+	}
+
+	if pr.Mode&PromptBorder != 0 {
+		rect.X++
+		rect.Y++
+		rect.W -= 2
+	}
+
+	rect.X += pr.Opts.ContentPadding
+	rect.Y += pr.Opts.ContentPadding
+	rect.W -= pr.Opts.ContentPadding * 2
+
+	return rect
+}
+
+func (pr *Prompt) outlineRect() Rect {
+	rect := pr.Rect
+
+	rect.H = pr.contentRect().H
+	if pr.Mode&PromptBorder != 0 {
+		rect.H += 2
+	}
+	rect.H += pr.Opts.ContentPadding * 2
+
+	return rect
+}
+
+func (pr *Prompt) Height() int {
+	return pr.outlineRect().H
+}
+
 func (pr *Prompt) SetPrompt(s string) {
 	pr.QPanel.SetText(s)
 }
@@ -136,46 +211,6 @@ func (pr *Prompt) Clear() {
 	pr.SetEdit("")
 	pr.SetHint("")
 	pr.SetStatus("")
-}
-
-func (pr *Prompt) contentRect() Rect {
-	rect := pr.Rect
-
-	rect.H = pr.QPanel.Rect.H + pr.Edit.Rect.H
-	if pr.HintPanel != nil && pr.GetHint() != "" {
-		rect.H += pr.HintPanel.Rect.H
-	}
-	if pr.StatusPanel != nil && pr.GetStatus() != "" {
-		rect.H += pr.StatusPanel.Rect.H
-	}
-
-	if pr.Mode&PromptBorder != 0 {
-		rect.X++
-		rect.Y++
-		rect.W -= 2
-	}
-
-	rect.X += pr.Opts.ContentPadding
-	rect.Y += pr.Opts.ContentPadding
-	rect.W -= pr.Opts.ContentPadding * 2
-
-	return rect
-}
-
-func (pr *Prompt) outlineRect() Rect {
-	rect := pr.Rect
-
-	rect.H = pr.contentRect().H
-	if pr.Mode&PromptBorder != 0 {
-		rect.H += 2
-	}
-	rect.H += pr.Opts.ContentPadding * 2
-
-	return rect
-}
-
-func (pr *Prompt) Height() int {
-	return pr.outlineRect().H
 }
 
 func (pr *Prompt) Draw() {

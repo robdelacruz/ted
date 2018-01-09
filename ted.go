@@ -1,5 +1,14 @@
 package main
 
+// Globals
+// -------
+// _log
+//
+// Functions
+// ---------
+// main()
+//
+
 import (
 	"fmt"
 	"log"

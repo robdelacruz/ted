@@ -1,5 +1,21 @@
 package main
 
+// Structs
+// -------
+// Label
+//
+// Consts
+// ------
+// LabelAutoSize
+//
+// Label
+// -----
+// NewLabel(s string, x, y, w, h int, attr TermAttr, mode LabelMode) *Label
+// SetText(s string)
+// SetPos(x, y int)
+// Draw()
+//
+
 import (
 	tb "github.com/nsf/termbox-go"
 )
@@ -30,7 +46,6 @@ func NewLabel(s string, x, y, w, h int, attr TermAttr, mode LabelMode) *Label {
 func (l *Label) SetText(s string) {
 	l.Text = s
 }
-
 func (l *Label) SetPos(x, y int) {
 	l.X = x
 	l.Y = y

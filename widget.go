@@ -1,5 +1,32 @@
 package main
 
+// Interfaces
+// ----------
+// Widget
+//
+// Structs
+// -------
+// LayoutItem
+// Layout
+//
+// Consts
+// ------
+// WidgetEventNone
+//
+// LayoutItem
+// ----------
+// NewLayoutItem(widget Widget, visible bool) *LayoutItem
+//
+// Layout
+// ------
+// NewLayout() *Layout
+// Rect() Rect
+// AddItem(item *LayoutItem)
+// SetFocusItem(item *LayoutItem)
+// Draw()
+// HandleEvent(e *tb.Event) (Widget, WidgetEventID)
+//
+
 import (
 	tb "github.com/nsf/termbox-go"
 )
@@ -25,15 +52,15 @@ type Layout struct {
 	FocusItem *LayoutItem
 }
 
-func NewLayout() *Layout {
-	return &Layout{}
-}
-
 func NewLayoutItem(widget Widget, visible bool) *LayoutItem {
 	return &LayoutItem{
 		Widget:  widget,
 		Visible: visible,
 	}
+}
+
+func NewLayout() *Layout {
+	return &Layout{}
 }
 
 func (layout *Layout) Rect() Rect {

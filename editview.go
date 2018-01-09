@@ -1,8 +1,44 @@
 package main
 
+// Structs
+// -------
+// EditView
+//
+// Consts
+// ------
+// EditViewBorder
+// EditViewStatusLine
+//
+// Functions
+// ---------
+//
+// EditView
+// --------
+// NewEditView(x, y, w, h int, mode EditViewMode,
+//				contentAttr, statusAttr TermAttr, buf *Buf) *EditView
+// contentRect() Rect
+// contentRange() (startPos, endPos Pos)
+//
+// Reset()
+// ResetCur()
+//
+// Draw()
+// drawText(rect Rect)
+// drawStatus(rect Rect)
+// drawCur(rect Rect)
+//
+// SetText(s string)
+// Text() string
+//
+// HandleEvent(e *tb.Event) (Widget, WidgetEventID)
+// navCurChar(chFn func() bool)
+// navCurWrapline(wlFn func() bool)
+// fitViewTopToCur()
+// ScrollN(nWraplines int)
+//
+
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	tb "github.com/nsf/termbox-go"
@@ -84,6 +120,11 @@ func (v *EditView) Reset() {
 	v.fitViewTopToCur()
 }
 
+func (v *EditView) ResetCur() {
+	v.Cur = Pos{0, 0}
+	v.bitCur.Seek(v.Cur)
+}
+
 func (v *EditView) Draw() {
 	clearRect(v.Rect, v.ContentAttr)
 	if v.Mode&EditViewBorder != 0 {
@@ -99,10 +140,6 @@ func (v *EditView) Draw() {
 	}
 
 	v.drawCur(contentRect)
-}
-
-func logln(s string) {
-	log.Println(s)
 }
 
 func (v *EditView) drawText(rect Rect) {
@@ -169,11 +206,6 @@ func (v *EditView) drawCur(rect Rect) {
 	}
 }
 
-func (v *EditView) ResetCur() {
-	v.Cur = Pos{0, 0}
-	v.bitCur.Seek(v.Cur)
-}
-
 func (v *EditView) SetText(s string) {
 	v.Buf.SetText(s)
 	v.Reset()
@@ -181,63 +213,6 @@ func (v *EditView) SetText(s string) {
 
 func (v *EditView) Text() string {
 	return v.Buf.Text()
-}
-
-func (v *EditView) navCurChar(chFn func() bool) {
-	if v.bitCur.Pos() != v.Cur {
-		v.bitCur.Seek(v.Cur)
-	}
-	if chFn() {
-		v.Cur = v.bitCur.Pos()
-
-		v.fitViewTopToCur()
-	}
-}
-
-func (v *EditView) navCurWrapline(wlFn func() bool) {
-	if v.bitWl.Seek(v.Cur) {
-		curWraplineCol := v.Cur.X - v.bitWl.Pos().X
-		if wlFn() {
-			v.Cur.Y = v.bitWl.Pos().Y
-			v.Cur.X = v.bitWl.Pos().X + curWraplineCol
-			eolX := v.bitWl.Pos().X + rlen(v.bitWl.Text()) - 1
-			if v.Cur.X > eolX {
-				v.Cur.X = eolX
-			}
-
-			v.fitViewTopToCur()
-		}
-	}
-}
-
-func (v *EditView) fitViewTopToCur() {
-	contentStartPos, contentEndPos := v.contentRange()
-	cmpCurRange := cmpPosRange(v.Cur, contentStartPos, contentEndPos)
-	if cmpCurRange < 0 {
-		v.ScrollN(-1)
-	} else if cmpCurRange > 0 {
-		v.ScrollN(1)
-	}
-}
-
-func (v *EditView) ScrollN(nWraplines int) {
-	if nWraplines == 0 {
-		return
-	}
-
-	// negative nWraplines means ScanPrev()
-	// positive nWrapLines means ScanNext()
-	scanfn := v.bitWl.ScanNext
-	if nWraplines < 0 {
-		scanfn = v.bitWl.ScanPrev
-		nWraplines = -nWraplines
-	}
-
-	v.bitWl.Seek(v.ViewTop)
-	for i := 0; i < nWraplines; i++ {
-		scanfn()
-	}
-	v.ViewTop = v.bitWl.Pos()
 }
 
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
@@ -325,4 +300,61 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	}
 
 	return v, WidgetEventNone
+}
+
+func (v *EditView) navCurChar(chFn func() bool) {
+	if v.bitCur.Pos() != v.Cur {
+		v.bitCur.Seek(v.Cur)
+	}
+	if chFn() {
+		v.Cur = v.bitCur.Pos()
+
+		v.fitViewTopToCur()
+	}
+}
+
+func (v *EditView) navCurWrapline(wlFn func() bool) {
+	if v.bitWl.Seek(v.Cur) {
+		curWraplineCol := v.Cur.X - v.bitWl.Pos().X
+		if wlFn() {
+			v.Cur.Y = v.bitWl.Pos().Y
+			v.Cur.X = v.bitWl.Pos().X + curWraplineCol
+			eolX := v.bitWl.Pos().X + rlen(v.bitWl.Text()) - 1
+			if v.Cur.X > eolX {
+				v.Cur.X = eolX
+			}
+
+			v.fitViewTopToCur()
+		}
+	}
+}
+
+func (v *EditView) fitViewTopToCur() {
+	contentStartPos, contentEndPos := v.contentRange()
+	cmpCurRange := cmpPosRange(v.Cur, contentStartPos, contentEndPos)
+	if cmpCurRange < 0 {
+		v.ScrollN(-1)
+	} else if cmpCurRange > 0 {
+		v.ScrollN(1)
+	}
+}
+
+func (v *EditView) ScrollN(nWraplines int) {
+	if nWraplines == 0 {
+		return
+	}
+
+	// negative nWraplines means ScanPrev()
+	// positive nWrapLines means ScanNext()
+	scanfn := v.bitWl.ScanNext
+	if nWraplines < 0 {
+		scanfn = v.bitWl.ScanPrev
+		nWraplines = -nWraplines
+	}
+
+	v.bitWl.Seek(v.ViewTop)
+	for i := 0; i < nWraplines; i++ {
+		scanfn()
+	}
+	v.ViewTop = v.bitWl.Pos()
 }

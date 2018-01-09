@@ -1,5 +1,28 @@
 package main
 
+// Structs
+// -------
+// Panel
+// PanelOptions
+//
+// Consts
+// ------
+// PanelBorder
+//
+// Panel
+// -----
+// NewPanel(x, y, w, h int, opts PanelOptions) *Panel
+// contentRect() Rect
+//
+// SetPos(x, y int)
+// SetText(s string)
+// Text() string
+//
+// Draw()
+// drawText(rect Rect)
+// HandleEvent(e *tb.Event) (Widget, WidgetEventID)
+//
+
 import (
 	tb "github.com/nsf/termbox-go"
 )
@@ -32,11 +55,6 @@ func NewPanel(x, y, w, h int, opts PanelOptions) *Panel {
 	return p
 }
 
-func (p *Panel) SetPos(x, y int) {
-	p.X = x
-	p.Y = y
-}
-
 func (p *Panel) contentRect() Rect {
 	rect := p.Rect
 	if p.Opts.Mode&PanelBorder != 0 {
@@ -48,6 +66,17 @@ func (p *Panel) contentRect() Rect {
 	return rect
 }
 
+func (p *Panel) SetPos(x, y int) {
+	p.X = x
+	p.Y = y
+}
+func (p *Panel) SetText(s string) {
+	p.Buf.SetText(s)
+}
+func (p *Panel) Text() string {
+	return p.Buf.Text()
+}
+
 func (p *Panel) Draw() {
 	clearRect(p.Rect, p.Opts.Attr)
 	if p.Opts.Mode&PanelBorder != 0 {
@@ -56,6 +85,7 @@ func (p *Panel) Draw() {
 
 	p.drawText(p.contentRect())
 }
+
 func (p *Panel) drawText(rect Rect) {
 	bit := NewBufIterWl(p.Buf, rect.W)
 	i := 0
@@ -67,13 +97,6 @@ func (p *Panel) drawText(rect Rect) {
 		print(sline, rect.X, rect.Y+i, p.Opts.Attr)
 		i++
 	}
-}
-
-func (p *Panel) SetText(s string) {
-	p.Buf.SetText(s)
-}
-func (p *Panel) Text() string {
-	return p.Buf.Text()
 }
 
 func (p *Panel) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
