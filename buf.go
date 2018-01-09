@@ -253,6 +253,11 @@ func (buf *Buf) SetText(s string) {
 		newBn.Prev = bn
 		bn = newBn
 	}
+
+	// Buf should always have at least one node.
+	if buf.H == nil {
+		buf.AppendLine("")
+	}
 }
 
 func (buf *Buf) Text() string {

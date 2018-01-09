@@ -38,6 +38,7 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 
 	if buf == nil {
 		buf = NewBuf()
+		buf.AppendLine("")
 	}
 	v.Buf = buf
 	v.bitCur = NewBufIterCh(v.Buf)
@@ -74,6 +75,13 @@ func (v *EditView) contentRange() (startPos, endPos Pos) {
 	endPos.X += rlen(v.bitWl.Text()) - 1
 
 	return startPos, endPos
+}
+
+func (v *EditView) Reset() {
+	v.Cur = Pos{0, 0}
+	v.bitCur.Reset()
+	v.bitWl.Reset()
+	v.fitViewTopToCur()
 }
 
 func (v *EditView) Draw() {
@@ -168,6 +176,7 @@ func (v *EditView) ResetCur() {
 
 func (v *EditView) SetText(s string) {
 	v.Buf.SetText(s)
+	v.Reset()
 }
 
 func (v *EditView) Text() string {

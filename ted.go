@@ -29,18 +29,19 @@ func main() {
 
 	// Main text edit view
 	editBuf := NewBuf()
-	editBuf.SetText(`
+	/*	editBuf.SetText(`
 
 
 
-ted - A terminal text editor
+		ted - A terminal text editor
 
-`)
+		`)*/
+	editBuf.SetText("")
 
-	err = editBuf.Load("sample.txt")
-	if err != nil {
-		panic(err)
-	}
+	//	err = editBuf.Load("sample.txt")
+	//	if err != nil {
+	//		panic(err)
+	//	}
 
 	editAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	statusAttr := TermAttr{tb.ColorBlack, tb.ColorWhite}
@@ -148,8 +149,7 @@ ted - A terminal text editor
 					} else {
 						promptW.Clear()
 						layout.SetFocusItem(editLI)
-						editW.ResetCur()
-						//editW.SyncBufText()
+						editW.Reset()
 						promptLI.Visible = false
 					}
 				}
