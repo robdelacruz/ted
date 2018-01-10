@@ -59,7 +59,10 @@ type EditView struct {
 	Cur         Pos
 	bitCur      *BufIterCh
 	bitWl       *BufIterWl
+	bitWl2      *BufIterWl
 	ViewTop     Pos
+	SelMode     bool
+	SelRange    PosRange
 }
 
 type EditViewMode uint
@@ -83,6 +86,7 @@ func NewEditView(x, y, w, h int, mode EditViewMode, contentAttr, statusAttr Term
 	v.Buf = buf
 	v.bitCur = NewBufIterCh(v.Buf)
 	v.bitWl = NewBufIterWl(v.Buf, v.contentRect().W)
+	v.bitWl2 = NewBufIterWl(v.Buf, v.contentRect().W)
 
 	return v
 }
@@ -119,8 +123,13 @@ func (v *EditView) contentRange() (startPos, endPos Pos) {
 
 func (v *EditView) Reset() {
 	v.Cur = Pos{0, 0}
+	v.SelMode = false
+	v.SelRange = PosRange{Pos{0, 0}, Pos{0, 0}}
+	v.ViewTop = Pos{0, 0}
+
 	v.bitCur.Reset()
 	v.bitWl.Reset()
+	v.bitWl2.Reset()
 	v.fitViewTopToCur()
 }
 
@@ -147,23 +156,66 @@ func (v *EditView) Draw() {
 }
 
 func (v *EditView) drawText(rect Rect) {
-	v.bitWl.Seek(v.ViewTop)
-	i := 0
+	var inSelRange bool
 
-	// First wrapline.
-	sline := v.bitWl.Text()
-	print(sline, rect.X, rect.Y+i, v.ContentAttr)
-	i++
+	v.bitWl.Seek(v.ViewTop)
 
 	// Succeeding wraplines until bottommost content row.
-	for v.bitWl.ScanNext() {
-		if i > rect.H-1 {
-			break
-		}
+	for i := 0; i < rect.H; i++ {
 		sline := v.bitWl.Text()
 		print(sline, rect.X, rect.Y+i, v.ContentAttr)
-		i++
+
+		if v.SelMode {
+			inSelRange = drawSelLine(rect, v.SelRange.Sorted(), v.bitWl, i, reverseAttr(v.ContentAttr), inSelRange)
+		}
+
+		if !v.bitWl.ScanNext() {
+			break
+		}
 	}
+}
+
+func drawSelLine(rect Rect, selRange PosRange, bit *BufIterWl, yContent int, selAttr TermAttr, inSelRange bool) bool {
+	slineRange := lineRange(bit)
+	sline := bit.Text()
+
+	selStartX := 0
+	selEndX := rlen(sline)
+
+	var lastSelLine bool
+	if posInRange(selRange.Begin, slineRange) {
+		selStartX = selRange.Begin.X - slineRange.Begin.X
+		inSelRange = true
+	}
+	if posInRange(selRange.End, slineRange) {
+		selEndX = rlen(sline) - (slineRange.End.X - selRange.End.X)
+		lastSelLine = true
+		inSelRange = false
+	}
+	if inSelRange || lastSelLine {
+		print(sline[selStartX:selEndX], rect.X+selStartX, rect.Y+yContent, selAttr)
+	}
+
+	return inSelRange
+}
+
+func posInRange(pos Pos, area PosRange) bool {
+	begin := area.Begin
+	end := area.End
+
+	if pos.Y >= begin.Y && pos.Y <= end.Y &&
+		pos.X >= begin.X && pos.X <= end.X {
+		return true
+	}
+	return false
+}
+
+func lineRange(bit *BufIterWl) PosRange {
+	begin := bit.Pos()
+	end := begin
+	end.X += rlen(bit.Text()) - 1
+
+	return PosRange{begin, end}
 }
 
 // Draw status line one row below content area.
@@ -189,6 +241,13 @@ func (v *EditView) drawStatus(rect Rect) {
 	// Cur pos y,x
 	sCurPos := fmt.Sprintf("%d,%d", v.Cur.Y+1, v.Cur.X+1)
 	print(sCurPos, left+width-(width/3), y, v.StatusAttr)
+
+	// Sel range y,x - y,x
+	if v.SelMode {
+		selB, selE := v.SelRange.Begin, v.SelRange.End
+		sSelRange := fmt.Sprintf("%d,%d - %d,%d", selB.Y+1, selB.X+1, selE.Y+1, selE.X+1)
+		print(sSelRange, left+width-(width/2), y, v.StatusAttr)
+	}
 }
 
 func (v *EditView) drawCur(rect Rect) {
@@ -220,7 +279,7 @@ func (v *EditView) Text() string {
 }
 
 func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
-	var bufChanged bool
+	var bufChanged, navChanged bool
 	var c rune
 
 	switch e.Key {
@@ -229,39 +288,54 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	// Nav single char
 	case tb.KeyArrowLeft:
 		v.navCurChar(v.bitCur.ScanPrev)
+		navChanged = true
 	case tb.KeyArrowRight:
 		v.navCurChar(v.bitCur.ScanNext)
+		navChanged = true
 	case tb.KeyArrowUp:
 		v.navCurWrapline(v.bitWl.ScanPrev)
+		navChanged = true
 	case tb.KeyArrowDown:
 		v.navCurWrapline(v.bitWl.ScanNext)
+		navChanged = true
 
 	// Nav word/line
 	case tb.KeyCtrlP:
 		fallthrough
 	case tb.KeyCtrlB:
 		v.navStartWord()
+		navChanged = true
 	case tb.KeyCtrlN:
 		fallthrough
 	case tb.KeyCtrlF:
 		v.navEndWord()
+		navChanged = true
 	case tb.KeyCtrlA:
 		v.navStartWrapline()
+		navChanged = true
 	case tb.KeyCtrlE:
 		v.navEndWrapline()
+		navChanged = true
 
 	// Scroll text
 	case tb.KeyCtrlU:
 		v.ViewTop = v.ScrollN(v.ViewTop, 0-v.contentRect().H/2)
 		v.Cur = v.ScrollN(v.Cur, 0-v.contentRect().H/2)
+		navChanged = true
 	case tb.KeyCtrlD:
 		v.ViewTop = v.ScrollN(v.ViewTop, v.contentRect().H/2)
 		v.Cur = v.ScrollN(v.Cur, v.contentRect().H/2)
+		navChanged = true
 
 	// Select/copy/paste text
 	case tb.KeyCtrlK:
+		if v.SelMode {
+			v.endSel()
+		} else {
+			v.startSel()
+		}
 	case tb.KeyCtrlC:
-		//$$ copy selected text
+		v.endSel()
 	case tb.KeyCtrlV:
 		//$$ paste into
 	case tb.KeyCtrlX:
@@ -301,6 +375,10 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		bufChanged = true
 	}
 
+	if navChanged {
+		v.updateSel()
+	}
+
 	if bufChanged {
 		v.bitCur.Reset()
 		v.bitWl.Reset()
@@ -308,6 +386,20 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	}
 
 	return v, WidgetEventNone
+}
+
+func (v *EditView) startSel() {
+	v.SelMode = true
+	v.SelRange = PosRange{v.Cur, v.Cur}
+}
+func (v *EditView) endSel() {
+	v.SelMode = false
+	v.SelRange = PosRange{Pos{0, 0}, Pos{0, 0}}
+}
+func (v *EditView) updateSel() {
+	if v.SelMode {
+		v.SelRange.End = v.Cur
+	}
 }
 
 func (v *EditView) navCurChar(chFn func() bool) {

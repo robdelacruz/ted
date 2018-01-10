@@ -11,6 +11,7 @@ import (
 type Pos struct{ X, Y int }
 type Size struct{ W, H int }
 type Rect struct{ X, Y, W, H int }
+type PosRange struct{ Begin, End Pos }
 
 type TermAttr struct{ Fg, Bg tb.Attribute }
 
@@ -25,6 +26,29 @@ func (rect Rect) String() string {
 
 func (pos *Pos) String() string {
 	return fmt.Sprintf("%d,%d", pos.X, pos.Y)
+}
+
+func (pos *Pos) After(pos2 Pos) bool {
+	if pos.Y > pos2.Y {
+		return true
+	}
+	if pos.Y == pos2.Y {
+		if pos.X > pos2.X {
+			return true
+		}
+	}
+	return false
+}
+
+func (pr *PosRange) String() string {
+	return fmt.Sprintf("%v - %v", pr.Begin, pr.End)
+}
+
+func (pr PosRange) Sorted() PosRange {
+	if pr.Begin.After(pr.End) {
+		return PosRange{pr.End, pr.Begin}
+	}
+	return pr
 }
 
 func reverseAttr(attr TermAttr) TermAttr {
@@ -75,22 +99,6 @@ func drawBox(x, y, width, height int, attr TermAttr) {
 
 	print("┘", x+width-1, y+height-1, attr)
 	print("└", x, y+height-1, attr)
-}
-
-func runeslen(s string) int {
-	return len([]rune(s))
-}
-
-func adjPos(outline, content Rect, x, y, borderWidth, paddingWidth int) (retOutline, retContent Rect) {
-	retOutline = outline
-	retContent = content
-
-	retOutline.X = x
-	retOutline.Y = y
-
-	retContent = NewRect(x+borderWidth+paddingWidth, y+borderWidth+paddingWidth, retOutline.W-borderWidth*2-paddingWidth*2, retOutline.H-borderWidth*2-paddingWidth*2)
-
-	return retOutline, retContent
 }
 
 func min(ns ...int) int {
