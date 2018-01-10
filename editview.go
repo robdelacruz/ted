@@ -33,8 +33,12 @@ package main
 // HandleEvent(e *tb.Event) (Widget, WidgetEventID)
 // navCurChar(chFn func() bool)
 // navCurWrapline(wlFn func() bool)
+// navStartWrapline()
+// navEndWrapline()
+// navStartWord()
+// navEndWord()
 // fitViewTopToCur()
-// ScrollN(nWraplines int)
+// ScrollN(beforePos Pos, nWraplines int) (afterPos Pos)
 //
 
 import (
@@ -236,19 +240,23 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 	case tb.KeyCtrlP:
 		fallthrough
 	case tb.KeyCtrlB:
-		//$$ go to start of previous word
+		v.navStartWord()
 	case tb.KeyCtrlN:
 		fallthrough
 	case tb.KeyCtrlF:
-		//$$ go to start of next word
+		v.navEndWord()
 	case tb.KeyCtrlA:
+		v.navStartWrapline()
 	case tb.KeyCtrlE:
+		v.navEndWrapline()
 
 	// Scroll text
 	case tb.KeyCtrlU:
-		//$$ scroll up half content area
+		v.ViewTop = v.ScrollN(v.ViewTop, 0-v.contentRect().H/2)
+		v.Cur = v.ScrollN(v.Cur, 0-v.contentRect().H/2)
 	case tb.KeyCtrlD:
-		//$$ scroll down half content area
+		v.ViewTop = v.ScrollN(v.ViewTop, v.contentRect().H/2)
+		v.Cur = v.ScrollN(v.Cur, v.contentRect().H/2)
 
 	// Select/copy/paste text
 	case tb.KeyCtrlK:
@@ -329,17 +337,40 @@ func (v *EditView) navCurWrapline(wlFn func() bool) {
 	}
 }
 
+func (v *EditView) navStartWrapline() {
+	if v.bitWl.Seek(v.Cur) {
+		v.Cur = v.bitWl.Pos()
+	}
+}
+func (v *EditView) navEndWrapline() {
+	if v.bitWl.Seek(v.Cur) {
+		endWlPos := v.bitWl.Pos()
+		endWlPos.X += rlen(v.bitWl.Text()) - 1
+		v.Cur = endWlPos
+	}
+}
+func (v *EditView) navStartWord() {
+	if v.bitCur.Pos() != v.Cur {
+		v.bitCur.Seek(v.Cur)
+	}
+}
+func (v *EditView) navEndWord() {
+	if v.bitCur.Pos() != v.Cur {
+		v.bitCur.Seek(v.Cur)
+	}
+}
+
 func (v *EditView) fitViewTopToCur() {
 	contentStartPos, contentEndPos := v.contentRange()
 	cmpCurRange := cmpPosRange(v.Cur, contentStartPos, contentEndPos)
 	if cmpCurRange < 0 {
-		v.ScrollN(-1)
+		v.ViewTop = v.ScrollN(v.ViewTop, -1)
 	} else if cmpCurRange > 0 {
-		v.ScrollN(1)
+		v.ViewTop = v.ScrollN(v.ViewTop, 1)
 	}
 }
 
-func (v *EditView) ScrollN(nWraplines int) {
+func (v *EditView) ScrollN(beforePos Pos, nWraplines int) (afterPos Pos) {
 	if nWraplines == 0 {
 		return
 	}
@@ -352,9 +383,9 @@ func (v *EditView) ScrollN(nWraplines int) {
 		nWraplines = -nWraplines
 	}
 
-	v.bitWl.Seek(v.ViewTop)
+	v.bitWl.Seek(beforePos)
 	for i := 0; i < nWraplines; i++ {
 		scanfn()
 	}
-	v.ViewTop = v.bitWl.Pos()
+	return v.bitWl.Pos()
 }

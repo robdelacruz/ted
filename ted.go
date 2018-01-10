@@ -45,12 +45,11 @@ func main() {
 		ted - A terminal text editor
 
 		`)*/
-	editBuf.SetText("")
 
-	//	err = editBuf.Load("sample.txt")
-	//	if err != nil {
-	//		panic(err)
-	//	}
+	err = editBuf.Load("sample.txt")
+	if err != nil {
+		_log.Printf("Error loading buf (%s)\n", err)
+	}
 
 	editAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	statusAttr := TermAttr{tb.ColorBlack, tb.ColorWhite}
