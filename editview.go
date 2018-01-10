@@ -156,9 +156,16 @@ func (v *EditView) Draw() {
 }
 
 func (v *EditView) drawText(rect Rect) {
-	var inSelRange bool
-
 	v.bitWl.Seek(v.ViewTop)
+
+	var inSelRange bool
+	selRange := v.SelRange.Sorted()
+	if v.SelMode {
+		viewTop := v.bitWl.Pos()
+		if v.SelRange.Begin.Y < viewTop.Y && v.SelRange.End.Y >= viewTop.Y {
+			inSelRange = true
+		}
+	}
 
 	// Succeeding wraplines until bottommost content row.
 	for i := 0; i < rect.H; i++ {
@@ -166,7 +173,7 @@ func (v *EditView) drawText(rect Rect) {
 		print(sline, rect.X, rect.Y+i, v.ContentAttr)
 
 		if v.SelMode {
-			inSelRange = drawSelLine(rect, v.SelRange.Sorted(), v.bitWl, i, reverseAttr(v.ContentAttr), inSelRange)
+			inSelRange = drawSelLine(rect, selRange, v.bitWl, i, reverseAttr(v.ContentAttr), inSelRange)
 		}
 
 		if !v.bitWl.ScanNext() {
