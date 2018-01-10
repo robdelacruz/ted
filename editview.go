@@ -63,6 +63,7 @@ type EditView struct {
 	ViewTop     Pos
 	SelMode     bool
 	SelRange    PosRange
+	ClipText    string
 }
 
 type EditViewMode uint
@@ -342,11 +343,31 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 			v.startSel()
 		}
 	case tb.KeyCtrlC:
-		v.endSel()
+		if v.SelMode {
+			selRange := v.SelRange.Sorted()
+			v.ClipText, _ = v.Buf.Copy(selRange.Begin, selRange.End)
+			v.endSel()
+		}
 	case tb.KeyCtrlV:
-		//$$ paste into
+		if len(v.ClipText) > 0 {
+			v.Buf.Paste(v.Cur, v.ClipText)
+			bufChanged = true
+		}
 	case tb.KeyCtrlX:
-		//$$ cut selected text
+		if v.SelMode {
+			selRange := v.SelRange.Sorted()
+			v.ClipText, _ = v.Buf.Cut(selRange.Begin, selRange.End)
+			v.endSel()
+
+			v.Cur = selRange.Begin
+			if !v.Buf.InBounds(v.Cur) {
+				// If cur out of bounds after cut, set cursor to nearest
+				// position before the out of bounds position.
+				v.bitCur.Seek(v.Cur)
+				v.Cur = v.bitCur.Pos()
+			}
+			bufChanged = true
+		}
 
 	// Delete text
 	case tb.KeyDelete:

@@ -96,3 +96,50 @@ func TestBufIterWl(t *testing.T) {
 	}
 
 }
+
+func TestBufCopyPaste(t *testing.T) {
+	buf := NewBuf()
+
+	text := `Line 1.
+Line 2.
+Line 3.
+
+Now is the time
+for all good men
+to come to the aid
+of the party.`
+
+	var begin, end Pos
+	var clip string
+	var slen int
+
+	buf.SetText(text)
+	begin = Pos{1, 0}
+	end = Pos{5, 0}
+	clip, slen = buf.Cut(begin, end)
+	fmt.Printf("Cut %v - %v:\nClip:\n'%s'\nLen: %d\nAfter:\n%s\n", begin, end, clip, slen, buf.Text())
+
+	buf.SetText(text)
+	begin = Pos{2, 1}
+	end = Pos{3, 4}
+	clip, slen = buf.Cut(begin, end)
+	fmt.Printf("Cut %v - %v:\nClip:\n'%s'\nLen: %d\nAfter:\n%s\n", begin, end, clip, slen, buf.Text())
+
+	buf.SetText(text)
+	begin = Pos{0, 0}
+	end = Pos{0, 2}
+	clip, slen = buf.Copy(begin, end)
+	fmt.Printf("Copy: %v - %v:\nClip:\n'%s'\nLen: %d\nAfter:\n%s\n", begin, end, clip, slen, buf.Text())
+
+	buf.SetText(text)
+	begin = Pos{2, 1}
+	end = Pos{4, 1}
+	clip, slen = buf.Copy(begin, end)
+	fmt.Printf("Copy: %v - %v:\nClip:\n'%s'\nLen: %d\nAfter:\n%s\n", begin, end, clip, slen, buf.Text())
+
+	buf.SetText(text)
+	begin = Pos{0, 1}
+	pasteText := "Line1a.\nabc"
+	buf.Paste(begin, pasteText)
+	fmt.Printf("Paste %v:\nPaste text:\n'%s'\nAfter:\n%s\n", begin, pasteText, buf.Text())
+}

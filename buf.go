@@ -47,6 +47,10 @@ package main
 // DelChars(pos Pos, nDel int) Pos
 // DelChar(pos Pos) Pos
 //
+// Cut(begin, end Pos) (string, int)
+// Copy(begin, end Pos) (string, int)
+// Paste(pos Pos, s string)
+//
 // BufNode
 // -------
 // NewBufNode(s string) *BufNode
@@ -486,6 +490,12 @@ func (buf *Buf) InsLF(pos Pos) Pos {
 }
 
 func (buf *Buf) InsText(pos Pos, s string) Pos {
+	var lastChar rune
+	rstr, rstrLen := runestr(s)
+	if rstrLen > 0 {
+		lastChar = rstr[rstrLen-1]
+	}
+
 	var slines []string
 	scanner := bufio.NewScanner(bytes.NewBufferString(s))
 	for scanner.Scan() {
@@ -495,7 +505,10 @@ func (buf *Buf) InsText(pos Pos, s string) Pos {
 	nslines := len(slines)
 	for i, sline := range slines {
 		pos = buf.InsStr(pos, sline)
-		if i < nslines-1 {
+
+		// Newline for first and middle lines
+		// and if last line ends with LF.
+		if i < nslines-1 || lastChar == '\n' {
 			pos = buf.InsLF(pos)
 		}
 	}
@@ -563,4 +576,80 @@ func (buf *Buf) DelChars(pos Pos, nDel int) Pos {
 
 func (buf *Buf) DelChar(pos Pos) Pos {
 	return buf.DelChars(pos, 1)
+}
+
+func (buf *Buf) Cut(begin, end Pos) (string, int) {
+	clip, slen := buf.Copy(begin, end)
+	buf.DelChars(begin, slen)
+	return clip, slen
+}
+
+func (buf *Buf) Copy(begin, end Pos) (string, int) {
+	var b bytes.Buffer
+
+	// One line only
+	if begin.Y == end.Y {
+		bn := buf.NodeFromY(begin.Y)
+		if bn == nil {
+			return "", 0
+		}
+		startX := begin.X
+		endX := end.X
+		rstr, slen := runestr(bn.S)
+		if startX > slen {
+			return "", 0
+		}
+		if endX > slen-1 {
+			endX = slen - 1
+		}
+
+		rclip := rstr[startX : endX+1]
+		return string(rclip), len(rclip)
+	}
+
+	// First line
+	y := begin.Y
+	bn := buf.NodeFromY(y)
+	if bn == nil {
+		return "", 0
+	}
+	startX := begin.X
+	rstr, slen := runestr(bn.S)
+	if startX < slen {
+		b.WriteString(string(rstr[startX:]))
+	}
+	y++
+
+	// Middle lines
+	for y < end.Y {
+		bn = buf.NodeFromY(y)
+		if bn == nil {
+			clip := b.String()
+			return clip, rlen(clip)
+		}
+		b.WriteString(bn.S)
+		y++
+	}
+
+	// Last line
+	if y == end.Y {
+		bn = buf.NodeFromY(y)
+		if bn == nil {
+			clip := b.String()
+			return clip, rlen(clip)
+		}
+		endX := end.X
+		rstr, slen = runestr(bn.S)
+		if endX > slen-1 {
+			endX = slen - 1
+		}
+		b.WriteString(string(rstr[:endX+1]))
+	}
+
+	clip := b.String()
+	return clip, rlen(clip)
+}
+
+func (buf *Buf) Paste(pos Pos, s string) {
+	buf.InsText(pos, s)
 }
