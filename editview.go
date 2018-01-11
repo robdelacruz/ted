@@ -38,6 +38,7 @@ package main
 // navStartWord()
 // navEndWord()
 // fitViewTopToCur()
+// trySetCurPos(newCurPos Pos)
 // ScrollN(beforePos Pos, nWraplines int) (afterPos Pos)
 //
 
@@ -355,22 +356,22 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 		}
 	case tb.KeyCtrlV:
 		if len(v.ClipText) > 0 {
+			if v.SelMode {
+				selRange := v.SelRange.Sorted()
+				v.Buf.Cut(selRange.Begin, selRange.End)
+				v.trySetCurPos(selRange.Begin)
+			}
 			v.Buf.Paste(v.Cur, v.ClipText)
 			bufChanged = true
 		}
+		v.endSel()
 	case tb.KeyCtrlX:
 		if v.SelMode {
 			selRange := v.SelRange.Sorted()
 			v.ClipText, _ = v.Buf.Cut(selRange.Begin, selRange.End)
 			v.endSel()
 
-			v.Cur = selRange.Begin
-			if !v.Buf.InBounds(v.Cur) {
-				// If cur out of bounds after cut, set cursor to nearest
-				// position before the out of bounds position.
-				v.bitCur.Seek(v.Cur)
-				v.Cur = v.bitCur.Pos()
-			}
+			v.trySetCurPos(selRange.Begin)
 			bufChanged = true
 		}
 
@@ -492,6 +493,16 @@ func (v *EditView) fitViewTopToCur() {
 		v.ViewTop = v.ScrollN(v.ViewTop, -1)
 	} else if cmpCurRange > 0 {
 		v.ViewTop = v.ScrollN(v.ViewTop, 1)
+	}
+}
+
+func (v *EditView) trySetCurPos(newCurPos Pos) {
+	v.Cur = newCurPos
+	if !v.Buf.InBounds(v.Cur) {
+		// If cur out of bounds after cut, set cursor to nearest
+		// position before the out of bounds position.
+		v.bitCur.Seek(v.Cur)
+		v.Cur = v.bitCur.Pos()
 	}
 }
 
