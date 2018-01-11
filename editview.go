@@ -246,16 +246,20 @@ func (v *EditView) drawStatus(rect Rect) {
 	}
 	print(bufName, left, y, v.StatusAttr)
 
-	// Cur pos y,x
-	sCurPos := fmt.Sprintf("%d,%d", v.Cur.Y+1, v.Cur.X+1)
-	print(sCurPos, left+width-(width/3), y, v.StatusAttr)
-
-	// Sel range y,x - y,x
+	// Sel range [y,x - y,x]
 	if v.SelMode {
-		selB, selE := v.SelRange.Begin, v.SelRange.End
-		sSelRange := fmt.Sprintf("%d,%d - %d,%d", selB.Y+1, selB.X+1, selE.Y+1, selE.X+1)
+		selRange := v.SelRange.Sorted()
+		sSelRange := fmt.Sprintf("[%d,%d - %d,%d]", selRange.Begin.Y+1, selRange.Begin.X+1, selRange.End.Y+1, selRange.End.X+1)
 		print(sSelRange, left+width-(width/2), y, v.StatusAttr)
 	}
+
+	// Cur pos y,x
+	sCurPos := fmt.Sprintf("%d,%d", v.Cur.Y+1, v.Cur.X+1)
+	print(sCurPos, left+width-(width/4), y, v.StatusAttr)
+
+	// Scroll pos %
+	sScrollPos := fmt.Sprintf("%d%%", v.Cur.Y*100/(v.Buf.NumNodes()-1))
+	print(sScrollPos, left+width-4, y, v.StatusAttr)
 }
 
 func (v *EditView) drawCur(rect Rect) {
@@ -292,6 +296,7 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	switch e.Key {
 	case tb.KeyEsc:
+		v.endSel()
 
 	// Nav single char
 	case tb.KeyArrowLeft:
