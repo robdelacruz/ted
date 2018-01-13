@@ -11,6 +11,9 @@ package main
 //
 // Functions
 // ---------
+// posInRange(pos Pos, area PosRange) bool
+// lineRange(bit *BufIterWl) PosRange
+// curXFromLineCol(x int, sline string) (xli int)
 //
 // EditView
 // --------
@@ -169,10 +172,10 @@ func (v *EditView) drawText(rect Rect) {
 		}
 	}
 
-	// Succeeding wraplines until bottommost content row.
+	// Draw wraplines from viewTop until bottommost content row.
 	for i := 0; i < rect.H; i++ {
 		sline := v.bitWl.Text()
-		print(sline, rect.X, rect.Y+i, v.ContentAttr)
+		print(expandTabs(sline), rect.X, rect.Y+i, v.ContentAttr)
 
 		if v.SelMode {
 			inSelRange = drawSelLine(rect, selRange, v.bitWl, i, reverseAttr(v.ContentAttr), inSelRange)
@@ -263,6 +266,19 @@ func (v *EditView) drawStatus(rect Rect) {
 	print(sScrollPos, left+width-4, y, v.StatusAttr)
 }
 
+// Return x pos of of a given line column, taking tabs into account.
+func curXFromLineCol(x int, sline string) (xli int) {
+	rstr, _ := runestr(sline)
+	for _, c := range rstr[:x] {
+		if c == '\t' {
+			xli, _ = nextTabStop(xli)
+			continue
+		}
+		xli++
+	}
+	return xli
+}
+
 func (v *EditView) drawCur(rect Rect) {
 	var contentCurPos Pos
 
@@ -274,7 +290,8 @@ func (v *EditView) drawCur(rect Rect) {
 
 	if wliCur >= wliViewTop {
 		contentCurPos.Y = wliCur - wliViewTop
-		contentCurPos.X = v.Cur.X - v.bitWl.Pos().X
+		wliX := v.Cur.X - v.bitWl.Pos().X
+		contentCurPos.X = curXFromLineCol(wliX, v.bitWl.Text())
 	}
 
 	if contentCurPos.Y < rect.H && contentCurPos.X < rect.W {

@@ -17,6 +17,7 @@ package main
 // rlen(s string) int
 // runestr(s string) ([]rune, int)
 // inBounds(slen, x int) int
+// expandTabs(sline string) string
 //
 // Buf
 // ---
@@ -30,6 +31,7 @@ package main
 // YFromNode(bnFind *BufNode) int
 // NodeFromY(y int) *BufNode
 // NodeFromYAutoAdd(y int) *BufNode
+// Line(y int) string
 // InBounds(pos Pos) bool
 //
 // SetText(s string)
@@ -121,6 +123,34 @@ func rlen(s string) int {
 func runestr(s string) ([]rune, int) {
 	rstr := []rune(s)
 	return rstr, len(rstr)
+}
+
+// Keep x always within bounds of line len.
+// Last char of line is always '\n' (LF), so slen-1 points to
+// location of '\n', which is last insert x col in line.
+func inBounds(slen, x int) int {
+	if x > slen-1 {
+		x = slen - 1
+	}
+	return x
+}
+
+func expandTabs(sline string) string {
+	var b bytes.Buffer
+	rstr, _ := runestr(sline)
+
+	var x int
+	for _, c := range rstr {
+		if c == '\t' {
+			nextTabX, pad := nextTabStop(x)
+			b.WriteString(pad)
+			x = nextTabX
+			continue
+		}
+		b.WriteRune(c)
+		x++
+	}
+	return b.String()
 }
 
 // BufNode with string
@@ -218,6 +248,14 @@ func (buf *Buf) NodeFromYAutoAdd(y int) *BufNode {
 		bn = buf.NodeFromY(y)
 	}
 	return bn
+}
+
+func (buf *Buf) Line(y int) string {
+	bn := buf.NodeFromY(y)
+	if bn == nil {
+		return ""
+	}
+	return bn.S
 }
 
 func (buf *Buf) InBounds(pos Pos) bool {
@@ -402,16 +440,6 @@ func (buf *Buf) DelNode(bnDel *BufNode) *BufNode {
 	}
 
 	return nil
-}
-
-// Keep x always within bounds of line len.
-// Last char of line is always '\n' (LF), so slen-1 points to
-// location of '\n', which is last insert x col in line.
-func inBounds(slen, x int) int {
-	if x > slen-1 {
-		x = slen - 1
-	}
-	return x
 }
 
 func (bn *BufNode) InsStr(x int, s string) int {

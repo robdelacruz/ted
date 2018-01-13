@@ -130,6 +130,12 @@ func (bit *BufIterWl) ScanNext() bool {
 		w, endwX := readNextWord(bit.rstr, bit.rstrLen, wlX)
 		wlen := rlen(w)
 
+		// Tab char len is number of spaces before next tab stop.
+		if w == "\t" {
+			nextTabX, _ := nextTabStop(wlX)
+			wlen = nextTabX - wlX
+		}
+
 		if wlen == 0 || wlNumChars+wlen > bit.wlMaxLen {
 			break
 		}
