@@ -13,7 +13,6 @@ package main
 // ---------
 // posInRange(pos Pos, area PosRange) bool
 // lineRange(bit *BufIterWl) PosRange
-// curXFromLineCol(x int, sline string) (xli int)
 //
 // EditView
 // --------
@@ -266,19 +265,6 @@ func (v *EditView) drawStatus(rect Rect) {
 	print(sScrollPos, left+width-4, y, v.StatusAttr)
 }
 
-// Return x pos of of a given line column, taking tabs into account.
-func curXFromLineCol(x int, sline string) (xli int) {
-	rstr, _ := runestr(sline)
-	for _, c := range rstr[:x] {
-		if c == '\t' {
-			xli, _ = nextTabStop(xli)
-			continue
-		}
-		xli++
-	}
-	return xli
-}
-
 func (v *EditView) drawCur(rect Rect) {
 	var contentCurPos Pos
 
@@ -291,7 +277,7 @@ func (v *EditView) drawCur(rect Rect) {
 	if wliCur >= wliViewTop {
 		contentCurPos.Y = wliCur - wliViewTop
 		wliX := v.Cur.X - v.bitWl.Pos().X
-		contentCurPos.X = curXFromLineCol(wliX, v.bitWl.Text())
+		contentCurPos.X = expandTabsX(wliX, v.bitWl.Text())
 	}
 
 	if contentCurPos.Y < rect.H && contentCurPos.X < rect.W {
@@ -464,6 +450,7 @@ func (v *EditView) navCurChar(chFn func() bool) {
 	}
 }
 
+/*
 func (v *EditView) navCurWrapline(wlFn func() bool) {
 	if v.bitWl.Seek(v.Cur) {
 		curWraplineCol := v.Cur.X - v.bitWl.Pos().X
@@ -474,6 +461,26 @@ func (v *EditView) navCurWrapline(wlFn func() bool) {
 			if v.Cur.X > eolX {
 				v.Cur.X = eolX
 			}
+
+			v.fitViewTopToCur()
+		}
+	}
+}
+*/
+func (v *EditView) navCurWrapline(wlFn func() bool) {
+	if v.bitWl.Seek(v.Cur) {
+		curWraplineCol := v.Cur.X - v.bitWl.Pos().X
+		curWraplineCol = expandTabsX(curWraplineCol, v.bitWl.Text())
+		if wlFn() {
+			v.Cur.Y = v.bitWl.Pos().Y
+			v.Cur.X = v.bitWl.Pos().X + curWraplineCol
+
+			maxWraplineCol := expandTabsX(rlen(v.bitWl.Text())-1, v.bitWl.Text())
+			if curWraplineCol > maxWraplineCol {
+				curWraplineCol = maxWraplineCol
+			}
+			curWraplineCol = unexpandTabsX(curWraplineCol, v.bitWl.Text())
+			v.Cur.X = v.bitWl.Pos().X + curWraplineCol
 
 			v.fitViewTopToCur()
 		}

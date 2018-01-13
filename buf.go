@@ -17,7 +17,6 @@ package main
 // rlen(s string) int
 // runestr(s string) ([]rune, int)
 // inBounds(slen, x int) int
-// expandTabs(sline string) string
 //
 // Buf
 // ---
@@ -133,24 +132,6 @@ func inBounds(slen, x int) int {
 		x = slen - 1
 	}
 	return x
-}
-
-func expandTabs(sline string) string {
-	var b bytes.Buffer
-	rstr, _ := runestr(sline)
-
-	var x int
-	for _, c := range rstr {
-		if c == '\t' {
-			nextTabX, pad := nextTabStop(x)
-			b.WriteString(pad)
-			x = nextTabX
-			continue
-		}
-		b.WriteRune(c)
-		x++
-	}
-	return b.String()
 }
 
 // BufNode with string
