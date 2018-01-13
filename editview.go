@@ -204,7 +204,9 @@ func drawSelLine(rect Rect, selRange PosRange, bit *BufIterWl, yContent int, sel
 		inSelRange = false
 	}
 	if inSelRange || lastSelLine {
-		print(sline[selStartX:selEndX], rect.X+selStartX, rect.Y+yContent, selAttr)
+		sline = expandTabs(sline[selStartX:selEndX])
+		selStartX = expandTabsX(selStartX, bit.Text())
+		print(sline, rect.X+selStartX, rect.Y+yContent, selAttr)
 	}
 
 	return inSelRange
