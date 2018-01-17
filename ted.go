@@ -82,13 +82,8 @@ func main() {
 	promptLI := NewLayoutItem(promptW, false)
 
 	// About panel
-	sAbout := `ted - A terminal text editor
-    by Rob de la Cruz
-
-    Thanks to termbox-go library`
-
-	aboutOpts := PanelOptions{sAbout, TermAttr{tb.ColorRed, tb.ColorWhite}, PanelBorder}
-	aboutW := NewPanel(10, 15, 55, 18, aboutOpts)
+	aboutOpts := PanelOptions{"", TermAttr{tb.ColorRed, tb.ColorWhite}, PanelBorder}
+	aboutW := NewPanel(13, 12, 55, 20, aboutOpts)
 	aboutLI := NewLayoutItem(aboutW, false)
 
 	layout := NewLayout()
@@ -107,6 +102,32 @@ func main() {
 		// CTRL-Q: Quit
 		if e.Key == tb.KeyCtrlQ {
 			break
+		}
+
+		// CTRL-H: About and Help
+		if e.Key == tb.KeyCtrlH {
+			sHelp := `  TED - a console text editor
+  by Rob de la Cruz
+  https://robdelacruz.github.io/ted.html
+  Available under MIT License.
+
+  Commands:
+    CTRL-Q: Quit
+    CTRL-H: About Ted and Help
+    CTRL-O: Open file
+    CTRL-S: Save file
+    CTRL-F: Search text
+    CTRL-G: Repeat last search
+    CTRL-K: Select text
+    CTRL-C: Copy selected text
+    CTRL-X: Cut selected text
+    CTRL-V: Paste text
+
+  ESC to return
+`
+			aboutW.SetText(sHelp)
+			aboutLI.Visible = true
+			layout.SetFocusItem(aboutLI)
 		}
 
 		// CTRL-O: Open File
@@ -158,6 +179,12 @@ func main() {
 
 		w, evid := layout.HandleEvent(&e)
 		switch w := w.(type) {
+		case *Panel:
+			if evid == PanelClose {
+				layout.SetFocusItem(editLI)
+				aboutLI.Visible = false
+			}
+
 		case *Prompt:
 			promptW := w
 

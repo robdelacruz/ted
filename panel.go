@@ -8,6 +8,7 @@ package main
 // Consts
 // ------
 // PanelBorder
+// PanelClose
 //
 // Panel
 // -----
@@ -37,6 +38,11 @@ type PanelMode uint
 
 const (
 	PanelBorder PanelMode = 1 << iota
+)
+
+const (
+	PanelNone WidgetEventID = iota
+	PanelClose
 )
 
 type PanelOptions struct {
@@ -100,5 +106,11 @@ func (p *Panel) drawText(rect Rect) {
 }
 
 func (p *Panel) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
+	if e.Type == tb.EventKey {
+		if e.Key == tb.KeyEsc {
+			return p, PanelClose
+		}
+	}
+
 	return p, WidgetEventNone
 }
