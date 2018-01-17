@@ -18,6 +18,18 @@ package main
 // runestr(s string) ([]rune, int)
 // inBounds(slen, x int) int
 //
+// BufNode
+// -------
+// NewBufNode(s string) *BufNode
+// NewBufLineNode(s string) *BufNode
+// InsertAfter(bnNew *BufNode)
+// InsertLineAfter(s string) *BufNode
+// MergeNextNode()
+// InsStr(x int, s string) int
+// InsChar(x int c rune) int
+// InsLF(x int) *BufNode
+// DelChars(x, nDel int)
+//
 // Buf
 // ---
 // NewBuf() *Buf
@@ -51,18 +63,7 @@ package main
 // Cut(begin, end Pos) (string, int)
 // Copy(begin, end Pos) (string, int)
 // Paste(pos Pos, s string)
-//
-// BufNode
-// -------
-// NewBufNode(s string) *BufNode
-// NewBufLineNode(s string) *BufNode
-// InsertAfter(bnNew *BufNode)
-// InsertLineAfter(s string) *BufNode
-// MergeNextNode()
-// InsStr(x int, s string) int
-// InsChar(x int c rune) int
-// InsLF(x int) *BufNode
-// DelChars(x, nDel int)
+// Search(pos Pos, s string) (foundPos Pos, fFound bool)
 //
 
 import (
@@ -661,4 +662,35 @@ func (buf *Buf) Copy(begin, end Pos) (string, int) {
 
 func (buf *Buf) Paste(pos Pos, s string) {
 	buf.InsText(pos, s)
+}
+
+func (buf *Buf) Search(pos Pos, s string) (foundPos Pos, fFound bool) {
+	bn := buf.NodeFromY(pos.Y)
+	if bn == nil {
+		return Pos{0, 0}, false
+	}
+
+	// Search first node starting from pos.X
+	if pos.X < rlen(bn.S) {
+		iFound := strings.Index(bn.S[pos.X:], s)
+		if iFound >= 0 {
+			return Pos{pos.X + iFound, pos.Y}, true
+		}
+	}
+
+	// Search succeeding nodes
+	bn = bn.Next
+	foundPos = Pos{0, pos.Y + 1}
+
+	for bn != nil {
+		iFound := strings.Index(bn.S, s)
+		if iFound >= 0 {
+			return Pos{foundPos.X + iFound, foundPos.Y}, true
+		}
+
+		bn = bn.Next
+		foundPos.Y++
+	}
+
+	return Pos{0, 0}, false
 }

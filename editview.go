@@ -320,13 +320,9 @@ func (v *EditView) HandleEvent(e *tb.Event) (Widget, WidgetEventID) {
 
 	// Nav word/line
 	case tb.KeyCtrlP:
-		fallthrough
-	case tb.KeyCtrlB:
 		v.navStartWord()
 		navChanged = true
 	case tb.KeyCtrlN:
-		fallthrough
-	case tb.KeyCtrlF:
 		v.navEndWord()
 		navChanged = true
 	case tb.KeyCtrlA:
@@ -550,4 +546,14 @@ func (v *EditView) ScrollN(beforePos Pos, nWraplines int) (afterPos Pos) {
 		scanfn()
 	}
 	return v.bitWl.Pos()
+}
+
+func (v *EditView) SearchForward(s string) {
+	if v.bitCur.Seek(v.Cur) && v.bitCur.ScanNext() {
+		curNextPos := v.bitCur.Pos()
+		foundPos, found := v.Buf.Search(curNextPos, s)
+		if found {
+			v.Cur = foundPos
+		}
+	}
 }

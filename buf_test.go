@@ -143,3 +143,38 @@ of the party.`
 	buf.Paste(begin, pasteText)
 	fmt.Printf("Paste %v:\nPaste text:\n'%s'\nAfter:\n%s\n", begin, pasteText, buf.Text())
 }
+
+func TestBufSearch(t *testing.T) {
+	buf := NewBuf()
+
+	text := `Line 1.
+Line 2.
+Line 3.
+
+Now is the time
+for all good men
+to come to the aid
+of the party.`
+
+	buf.SetText(text)
+
+	startPos := Pos{0, 0}
+	s := "is the"
+	foundPos, found := buf.Search(startPos, s)
+	fmt.Printf("BufSearch(%v, '%s') returned %v, %v\n", startPos, s, foundPos, found)
+
+	startPos = Pos{2, 5}
+	s = "good men"
+	foundPos, found = buf.Search(startPos, s)
+	fmt.Printf("BufSearch(%v, '%s') returned %v, %v\n", startPos, s, foundPos, found)
+
+	startPos = Pos{9, 5}
+	s = "good men"
+	foundPos, found = buf.Search(startPos, s)
+	fmt.Printf("BufSearch(%v, '%s') returned %v, %v\n", startPos, s, foundPos, found)
+
+	startPos = Pos{1, 1}
+	s = "12345"
+	foundPos, found = buf.Search(startPos, s)
+	fmt.Printf("BufSearch(%v, '%s') returned %v, %v\n", startPos, s, foundPos, found)
+}

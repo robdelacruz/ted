@@ -36,6 +36,9 @@ func main() {
 
 	termW, termH := tb.Size()
 
+	// Last search string
+	var searchS string
+
 	// Main text edit view
 	editBuf := NewBuf()
 	/*	editBuf.SetText(`
@@ -135,6 +138,24 @@ func main() {
 			layout.SetFocusItem(promptLI)
 		}
 
+		// CTRL-F: Search text
+		if e.Key == tb.KeyCtrlF {
+			promptW.SetPrompt("Search:")
+			promptW.SetHint("<ENTER> to Search, <ESC> to Cancel")
+			promptW.SetStatus("")
+
+			promptW.X = termW/2 - promptWWidth/2
+			promptW.Y = termH/2 - promptW.Height()
+
+			promptLI.Visible = true
+			layout.SetFocusItem(promptLI)
+		}
+
+		// CTRL-G: Repeat last search
+		if e.Key == tb.KeyCtrlG && searchS != "" {
+			editW.SearchForward(searchS)
+		}
+
 		w, evid := layout.HandleEvent(&e)
 		switch w := w.(type) {
 		case *Prompt:
@@ -146,7 +167,6 @@ func main() {
 				promptLI.Visible = false
 			} else if evid == PromptOK {
 				prompt := strings.TrimSpace(promptW.GetPrompt())
-				_log.Printf("prompt = '%s'\n", prompt)
 				if prompt == "Open file:" {
 					file := promptW.GetEditText()
 					err := editBuf.Load(file)
@@ -175,6 +195,15 @@ func main() {
 						layout.SetFocusItem(editLI)
 						promptLI.Visible = false
 					}
+				}
+
+				if prompt == "Search:" {
+					searchS = promptW.GetEditText()
+					editW.SearchForward(searchS)
+
+					promptW.Clear()
+					layout.SetFocusItem(editLI)
+					promptLI.Visible = false
 				}
 			}
 		}
