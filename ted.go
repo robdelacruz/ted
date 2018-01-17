@@ -19,6 +19,7 @@ import (
 )
 
 var _log *log.Logger
+var _termW, _termH int
 
 func main() {
 	flog, err := os.Create("./log.txt")
@@ -34,29 +35,21 @@ func main() {
 	}
 	defer tb.Close()
 
-	termW, termH := tb.Size()
+	_termW, _termH = tb.Size()
 
 	// Last search string
 	var searchS string
 
+	// Open file pending
+	//var fPendingOpenFile bool
+
 	// Main text edit view
 	editBuf := NewBuf()
-	/*	editBuf.SetText(`
-
-
-
-		ted - A terminal text editor
-
-		`)*/
-
-	err = editBuf.Load("sample.txt")
-	if err != nil {
-		_log.Printf("Error loading buf (%s)\n", err)
-	}
+	editBuf.AppendLine("")
 
 	editAttr := TermAttr{tb.ColorWhite, tb.ColorBlack}
 	statusAttr := TermAttr{tb.ColorBlack, tb.ColorWhite}
-	editW := NewEditView(0, 0, termW, termH, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, editBuf)
+	editW := NewEditView(0, 0, _termW, _termH, EditViewBorder|EditViewStatusLine, editAttr, statusAttr, editBuf)
 	editLI := NewLayoutItem(editW, true)
 
 	// Prompt panel
@@ -75,10 +68,10 @@ func main() {
 		StatusAttr:     statusPromptAttr,
 		StatusHeight:   2,
 	}
-	promptWWidth := termW / 2
+	promptWWidth := _termW / 2
 	promptW := NewPrompt(0, 0, promptWWidth, PromptBorder, &promptOpts)
-	promptW.X = termW/2 - promptWWidth/2
-	promptW.Y = termH/2 - promptW.Height()
+	promptW.X = _termW/2 - promptWWidth/2
+	promptW.Y = _termH/2 - promptW.Height()
 	promptLI := NewLayoutItem(promptW, false)
 
 	// About panel
@@ -91,6 +84,27 @@ func main() {
 	layout.AddItem(promptLI)
 	layout.AddItem(aboutLI)
 	layout.SetFocusItem(editLI)
+
+	if len(os.Args) > 1 {
+		file := os.Args[1]
+		err = editBuf.Load(file)
+		if err != nil {
+			// File not found, prompt for another file.
+			promptW.SetPrompt("Open file:")
+			promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
+			promptW.SetEdit(file)
+			serr := fmt.Sprintf("Error loading file (%s)", err)
+			promptW.SetStatus(serr)
+
+			promptW.X = _termW/2 - promptWWidth/2
+			promptW.Y = _termH/2 - promptW.Height()
+
+			promptLI.Visible = true
+			layout.SetFocusItem(promptLI)
+		} else {
+			editW.Reset()
+		}
+	}
 
 	tb.Clear(0, 0)
 	layout.Draw()
@@ -132,31 +146,12 @@ func main() {
 
 		// CTRL-O: Open File
 		if e.Key == tb.KeyCtrlO {
-			promptW.SetPrompt("Open file:")
-			promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
-			promptW.SetStatus("")
-
-			promptW.X = termW/2 - promptWWidth/2
-			promptW.Y = termH/2 - promptW.Height()
-
-			promptLI.Visible = true
-			layout.SetFocusItem(promptLI)
+			PromptOpenFile(promptW, promptLI, layout)
 		}
 
 		// CTRL-S: Save File
 		if e.Key == tb.KeyCtrlS {
-			promptW.SetPrompt("Save file:")
-			promptW.SetHint("<ENTER> to Save, <ESC> to Cancel")
-			promptW.SetStatus("")
-
-			promptW.X = termW/2 - promptWWidth/2
-			promptW.Y = termH/2 - promptW.Height()
-
-			file := editBuf.Name
-			promptW.SetEdit(file)
-
-			promptLI.Visible = true
-			layout.SetFocusItem(promptLI)
+			PromptSaveFile(promptW, promptLI, layout, editBuf.Name)
 		}
 
 		// CTRL-F: Search text
@@ -165,8 +160,8 @@ func main() {
 			promptW.SetHint("<ENTER> to Search, <ESC> to Cancel")
 			promptW.SetStatus("")
 
-			promptW.X = termW/2 - promptWWidth/2
-			promptW.Y = termH/2 - promptW.Height()
+			promptW.X = _termW/2 - promptWWidth/2
+			promptW.Y = _termH/2 - promptW.Height()
 
 			promptLI.Visible = true
 			layout.SetFocusItem(promptLI)
@@ -239,4 +234,30 @@ func main() {
 		layout.Draw()
 		flush()
 	}
+}
+
+func PromptOpenFile(promptW *Prompt, promptLI *LayoutItem, layout *Layout) {
+	promptW.SetPrompt("Open file:")
+	promptW.SetHint("<ENTER> to Open, <ESC> to Cancel")
+	promptW.SetStatus("")
+
+	promptW.X = _termW/2 - promptW.Rect.W/2
+	promptW.Y = _termH/2 - promptW.Height()
+
+	promptLI.Visible = true
+	layout.SetFocusItem(promptLI)
+}
+
+func PromptSaveFile(promptW *Prompt, promptLI *LayoutItem, layout *Layout, file string) {
+	promptW.SetPrompt("Save file:")
+	promptW.SetHint("<ENTER> to Save, <ESC> to Cancel")
+	promptW.SetStatus("")
+
+	promptW.X = _termW/2 - promptW.Rect.W/2
+	promptW.Y = _termH/2 - promptW.Height()
+
+	promptW.SetEdit(file)
+
+	promptLI.Visible = true
+	layout.SetFocusItem(promptLI)
 }

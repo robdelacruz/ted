@@ -263,7 +263,12 @@ func (v *EditView) drawStatus(rect Rect) {
 	print(sCurPos, left+width-(width/4), y, v.StatusAttr)
 
 	// Scroll pos %
-	sScrollPos := fmt.Sprintf("%d%%", v.Cur.Y*100/(v.Buf.NumNodes()-1))
+	var sScrollPos string
+	if v.Buf.NumNodes() <= 1 {
+		sScrollPos = "100%"
+	} else {
+		sScrollPos = fmt.Sprintf("%d%%", v.Cur.Y*100/(v.Buf.NumNodes()-1))
+	}
 	print(sScrollPos, left+width-4, y, v.StatusAttr)
 }
 
