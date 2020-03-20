@@ -27,6 +27,6 @@ Press CTRL-H to see the list of keyboard shotcuts.
 
 ## Screenshots
 
-![ted screen 1](screenshots/ted_screenshot2.png)
-![ted screen 2](screenshots/ted_screenshot1.png)
+![ted screen 1](screenshots/ted_screenshot1.png)
+![ted screen 2](screenshots/ted_screenshot2.png)
 
