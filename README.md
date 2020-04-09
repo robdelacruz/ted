@@ -33,6 +33,6 @@ Press CTRL-H to see the list of keyboard shotcuts.
 
 ## Download
 
-![Debian/Ubuntu](download/ted)
-![Windows](download/ted.exe)
+[Debian/Ubuntu](download/ted)
+[Windows](download/ted.exe)
 
